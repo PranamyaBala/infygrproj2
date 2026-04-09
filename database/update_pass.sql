@@ -1,0 +1,1 @@
+UPDATE hostel_user_db.users SET password='$2a$10$uW.AfJfc0U/iHO2e6ovG5ez62QasJZ3GSuhnJDqqPpw2Cbvm8Vguiu';

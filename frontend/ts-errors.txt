@@ -1,0 +1,12 @@
+﻿src/pages/admin/AdminDashboard.tsx(4,12): error TS6133: 'Alert' is declared but its value is never read.
+src/pages/admin/AdminDashboard.tsx(7,51): error TS6133: 'FaTimesCircle' is declared but its value is never read.
+src/pages/admin/AdminReportsPage.tsx(135,21): error TS2322: Type '(value: number) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType> & ((value: ValueType, name: NameType, item: TooltipPayloadEntry, index: number, payload: TooltipPayload) => ReactNode | [...])'.
+  Type '(value: number) => [string, string]' is not assignable to type 'Formatter<ValueType, NameType>'.
+    Types of parameters 'value' and 'value' are incompatible.
+      Type 'ValueType | undefined' is not assignable to type 'number'.
+        Type 'undefined' is not assignable to type 'number'.
+src/pages/admin/BookingManagementPage.tsx(3,64): error TS6133: 'Alert' is declared but its value is never read.
+src/pages/student/BookingDetailPage.tsx(8,27): error TS6133: 'FaDownload' is declared but its value is never read.
+src/pages/student/ProfilePage.tsx(14,9): error TS6133: 'authUser' is declared but its value is never read.
+src/pages/student/RoomDetailPage.tsx(8,44): error TS6133: 'FaMoneyBillWave' is declared but its value is never read.
+src/pages/student/RoomSearchPage.tsx(4,67): error TS6133: 'InputGroup' is declared but its value is never read.

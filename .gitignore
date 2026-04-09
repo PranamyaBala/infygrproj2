@@ -1,0 +1,22 @@
+# Node
+node_modules/
+dist/
+build/
+
+# Maven/Java
+target/
+*.jar
+*.war
+*.log
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env variables
+.env
