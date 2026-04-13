@@ -29,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(authResponse);
     setToken(authResponse.token);
     localStorage.setItem('token', authResponse.token);
-    localStorage.setItem('userId', authResponse.id.toString());
     localStorage.setItem('user', JSON.stringify(authResponse));
   };
 
@@ -37,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
-    localStorage.removeItem('userId');
     localStorage.removeItem('user');
   };
 

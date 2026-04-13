@@ -46,7 +46,7 @@ export default function LoginPage() {
             <div className="text-center mb-4">
               <FaHotel size={48} className="text-primary mb-3" />
               <h2 className="text-white fw-bold">Welcome to HostelHub</h2>
-              <p className="text-muted">Sign in to manage your hostel bookings</p>
+
             </div>
 
             <Card className="shadow-lg border-0" style={{ borderRadius: '1rem' }}>

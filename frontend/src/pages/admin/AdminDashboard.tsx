@@ -77,7 +77,13 @@ export default function AdminDashboard() {
 
   const openStatusModal = (room: Room) => {
     setSelectedRoom(room);
-    setStatusUpdate({ status: room.status });
+    setStatusUpdate({ 
+      status: room.status,
+      maintenanceStartDate: room.maintenanceStartDate,
+      maintenanceEndDate: room.maintenanceEndDate,
+      occupiedStartDate: room.occupiedStartDate,
+      occupiedEndDate: room.occupiedEndDate
+    });
     setShowStatusModal(true);
   };
 
@@ -329,6 +335,30 @@ export default function AdminDashboard() {
                     type="date"
                     value={statusUpdate.maintenanceEndDate || ''}
                     onChange={(e) => setStatusUpdate(prev => ({ ...prev, maintenanceEndDate: e.target.value }))}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+          )}
+          {statusUpdate.status === 'OCCUPIED' && (
+            <Row>
+              <Col>
+                <Form.Group className="mb-3">
+                  <Form.Label>Check-in Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={statusUpdate.occupiedStartDate || ''}
+                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, occupiedStartDate: e.target.value }))}
+                  />
+                </Form.Group>
+              </Col>
+              <Col>
+                <Form.Group className="mb-3">
+                  <Form.Label>Check-out Date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={statusUpdate.occupiedEndDate || ''}
+                    onChange={(e) => setStatusUpdate(prev => ({ ...prev, occupiedEndDate: e.target.value }))}
                   />
                 </Form.Group>
               </Col>

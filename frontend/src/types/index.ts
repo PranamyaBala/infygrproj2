@@ -61,6 +61,8 @@ export interface Room {
   floorPlanPath?: string;
   maintenanceStartDate?: string;
   maintenanceEndDate?: string;
+  occupiedStartDate?: string;
+  occupiedEndDate?: string;
   amenities?: Amenity[];
 }
 
@@ -96,6 +98,8 @@ export interface UpdateRoomStatusRequest {
   status: string;
   maintenanceStartDate?: string;
   maintenanceEndDate?: string;
+  occupiedStartDate?: string;
+  occupiedEndDate?: string;
 }
 
 export interface PricingTier {

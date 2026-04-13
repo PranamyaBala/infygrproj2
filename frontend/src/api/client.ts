@@ -16,11 +16,6 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // Attach user ID for booking service
-    const userId = localStorage.getItem('userId');
-    if (userId) {
-      config.headers['X-User-Id'] = userId;
-    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -30,9 +25,9 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only redirect if it's a 401 and not on the login path
+    if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
       localStorage.removeItem('token');
-      localStorage.removeItem('userId');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }

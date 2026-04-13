@@ -4,8 +4,8 @@
 -- =============================================================
 
 -- ===================== USER SCHEMA ===========================
-CREATE DATABASE IF NOT EXISTS hostel_user_db;
-USE hostel_user_db;
+CREATE DATABASE IF NOT EXISTS hostel_db;
+USE hostel_db;
 
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -36,8 +36,8 @@ CREATE TABLE user_preferences (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ===================== ROOM SCHEMA ===========================
-CREATE DATABASE IF NOT EXISTS hostel_room_db;
-USE hostel_room_db;
+CREATE DATABASE IF NOT EXISTS hostel_db;
+USE hostel_db;
 
 CREATE TABLE rooms (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -100,8 +100,8 @@ CREATE TABLE room_events (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ===================== BOOKING SCHEMA ========================
-CREATE DATABASE IF NOT EXISTS hostel_booking_db;
-USE hostel_booking_db;
+CREATE DATABASE IF NOT EXISTS hostel_db;
+USE hostel_db;
 
 CREATE TABLE bookings (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -126,8 +126,8 @@ CREATE TABLE bookings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ===================== NOTIFICATION SCHEMA ====================
-CREATE DATABASE IF NOT EXISTS hostel_notification_db;
-USE hostel_notification_db;
+CREATE DATABASE IF NOT EXISTS hostel_db;
+USE hostel_db;
 
 CREATE TABLE notification_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -142,7 +142,7 @@ CREATE TABLE notification_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ===================== SEED DATA =============================
-USE hostel_room_db;
+USE hostel_db;
 
 -- Seed amenities
 INSERT INTO amenities (name, icon, description) VALUES
@@ -186,7 +186,7 @@ INSERT INTO room_amenities (room_id, amenity_id) VALUES
 (12, 2), (12, 5), (12, 6), (12, 7);     -- Room 304: WiFi, AC, Desk, Wardrobe
 
 -- Seed admin user (password: Admin@123 — BCrypt hashed)
-USE hostel_user_db;
+USE hostel_db;
 INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES
 ('admin@hostel.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'System', 'Administrator', '9999999999', 'ADMIN'),
 ('student@hostel.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'John', 'Doe', '8888888888', 'STUDENT');

@@ -1,6 +1,6 @@
 @echo off
 REM =====================================================
-REM  HostelHub - Start All Backend Services
+REM  HostelHub - Start Backend Monolith
 REM  Run this from the backend/ directory
 REM =====================================================
 
@@ -10,8 +10,8 @@ set PATH=%MAVEN_HOME%\bin;%JAVA_HOME%\bin;%PATH%
 
 echo.
 echo ============================================
-echo   HostelHub Backend Services Launcher
-echo   MySQL: hostel_*_db (password: pass)
+echo   HostelHub Backend Monolith Launcher
+echo   MySQL: hostel_db
 echo   JAVA_HOME = %JAVA_HOME%
 echo   MAVEN_HOME = %MAVEN_HOME%
 echo ============================================
@@ -20,38 +20,18 @@ echo.
 REM Verify Maven
 call mvn.cmd -version >nul 2>&1
 if ERRORLEVEL 1 (
-    echo ERROR: Maven not found! Check the tools directory.
-    pause
-    exit /b 1
+    echo ERROR: Maven not found! Using global mvn...
+    start "Backend Monolith" cmd /k "cd /d %~dp0 && mvn spring-boot:run"
+    exit /b 0
 )
 
-echo Starting User Service (port 8081)...
-start "User Service" cmd /k "cd /d %~dp0user-service && %MAVEN_HOME%\bin\mvn spring-boot:run"
-
-timeout /t 15 /nobreak >nul
-echo Starting Room Service (port 8083)...
-start "Room Service" cmd /k "cd /d %~dp0room-service && %MAVEN_HOME%\bin\mvn spring-boot:run"
-
-timeout /t 15 /nobreak >nul
-echo Starting Booking Service (port 8085)...
-start "Booking Service" cmd /k "cd /d %~dp0booking-service && %MAVEN_HOME%\bin\mvn spring-boot:run"
-
-timeout /t 15 /nobreak >nul
-echo Starting Notification Service (port 8087)...
-start "Notification Service" cmd /k "cd /d %~dp0notification-service && %MAVEN_HOME%\bin\mvn spring-boot:run"
-
-timeout /t 15 /nobreak >nul
-echo Starting API Gateway (port 8080)...
-start "API Gateway" cmd /k "cd /d %~dp0api-gateway && %MAVEN_HOME%\bin\mvn spring-boot:run"
+echo Starting Monolithic Backend (port 8080)...
+start "Backend Monolith" cmd /k "cd /d %~dp0 && %MAVEN_HOME%\bin\mvn spring-boot:run"
 
 echo.
 echo ============================================
-echo   All services starting!
-echo   User Service:         http://localhost:8081
-echo   Room Service:         http://localhost:8083
-echo   Booking Service:      http://localhost:8085
-echo   Notification Service: http://localhost:8087
-echo   API Gateway:          http://localhost:8080
+echo   Backend is starting!
+echo   Main Application:     http://localhost:8080
 echo ============================================
 echo.
 pause
