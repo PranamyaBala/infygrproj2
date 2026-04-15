@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fa';
 import { bookingApi } from '../../api/bookingApi';
 import type { Booking } from '../../types';
+import toast from 'react-hot-toast';
 
 export default function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export default function BookingDetailPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadBooking();
@@ -29,6 +31,31 @@ export default function BookingDetailPage() {
       setError('Booking not found.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestLateCheckout = async () => {
+    if (!id || !booking) return;
+    
+    // US 14: Fee logic is 15% of total price
+    const estimatedFee = booking.totalPrice * 0.15;
+    
+    if (!window.confirm(`Requesting late checkout will add a 15% fee (approx. ₹${estimatedFee.toFixed(2)}) to your total bill. Do you want to proceed?`)) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await bookingApi.handleLateCheckout(Number(id), {
+        lateCheckoutFee: estimatedFee,
+        notes: booking.notes ? `${booking.notes} | Requested Late Checkout` : 'Requested Late Checkout'
+      });
+      toast.success('Late checkout requested successfully!');
+      loadBooking();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to request late checkout.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -136,15 +163,43 @@ export default function BookingDetailPage() {
             <Card.Body className="text-center">
               <h6 className="text-muted mb-2">Total Price</h6>
               <h2 className="text-primary fw-bold">
-                <FaMoneyBillWave className="me-2" />₹{booking.totalPrice}
+                <FaMoneyBillWave className="me-2" />₹{(booking.totalPrice + (booking.lateCheckoutFee || 0)).toFixed(2)}
               </h2>
               {booking.lateCheckoutFee && booking.lateCheckoutFee > 0 && (
-                <div className="mt-2">
-                  <small className="text-muted">Late checkout fee: ₹{booking.lateCheckoutFee}</small>
+                <div className="mt-2 p-2 bg-warning bg-opacity-10 rounded border border-warning">
+                  <small className="text-warning fw-bold">
+                    Includes ₹{booking.lateCheckoutFee.toFixed(2)} Late Checkout Fee
+                  </small>
                 </div>
               )}
             </Card.Body>
           </Card>
+
+          {/* US 14: Late Checkout Action */}
+          {booking.status === 'CHECKED_IN' && !booking.lateCheckoutRequested && (
+            <Card className="border-0 shadow-sm mb-4 bg-primary text-white">
+              <Card.Body className="text-center">
+                <FaClock size={32} className="mb-3" />
+                <h5>Need more time?</h5>
+                <p className="small mb-3">Request a late checkout for a small fee (15% of total price).</p>
+                <Button 
+                  variant="light" 
+                  className="w-100 fw-bold text-primary"
+                  onClick={handleRequestLateCheckout}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Requesting...' : 'Request Late Checkout'}
+                </Button>
+              </Card.Body>
+            </Card>
+          )}
+
+          {booking.lateCheckoutRequested && (
+            <Alert variant="info" className="mb-4">
+              <FaCheckCircle className="me-2" />
+              Late checkout has been applied to this booking.
+            </Alert>
+          )}
 
           <Card className="border-0 shadow-sm">
             <Card.Body>

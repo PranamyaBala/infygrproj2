@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container, Row, Col, Card, Table, Badge, Button, Form,
   Spinner, Modal
@@ -14,6 +15,7 @@ import toast from 'react-hot-toast';
 const ROOM_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'SUITE', 'DORMITORY'];
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +25,7 @@ export default function AdminDashboard() {
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [newRoom, setNewRoom] = useState<CreateRoomRequest>({
     roomNumber: '', roomType: 'SINGLE', floor: 1, capacity: 1,
-    pricePerNight: 50, description: '', amenityIds: []
+    pricePerNight: 50, description: '', imagePath: '', amenityIds: []
   });
   const [addingRoom, setAddingRoom] = useState(false);
 
@@ -176,7 +178,12 @@ export default function AdminDashboard() {
                   <td>{room.roomType}</td>
                   <td>{room.floor}</td>
                   <td>{room.capacity}</td>
-                  <td>₹{room.pricePerNight}</td>
+                  <td>
+                    <div className="fw-bold text-primary">₹{room.currentPrice}</div>
+                    {room.currentPrice !== room.pricePerNight && (
+                      <small className="text-muted text-decoration-line-through" style={{ fontSize: '0.75rem' }}>₹{room.pricePerNight}</small>
+                    )}
+                  </td>
                   <td>{getStatusBadge(room.status)}</td>
                   <td>
                     {room.amenities?.slice(0, 2).map(a => (
@@ -189,9 +196,23 @@ export default function AdminDashboard() {
                     )}
                   </td>
                   <td>
-                    <Button variant="outline-primary" size="sm" onClick={() => openStatusModal(room)}>
-                      Update Status
-                    </Button>
+                    <div className="d-flex gap-2">
+                      <Button variant="outline-primary" size="sm" onClick={() => openStatusModal(room)}>
+                        Status
+                      </Button>
+                      <Button 
+                        variant="outline-info" size="sm" 
+                        onClick={() => navigate(`/admin/rooms/${room.id}/pricing`)}
+                      >
+                        Pricing
+                      </Button>
+                      <Button 
+                        variant="outline-secondary" size="sm" 
+                        onClick={() => navigate(`/admin/rooms/${room.id}/events`)}
+                      >
+                        Events
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -273,6 +294,18 @@ export default function AdminDashboard() {
                 value={newRoom.description}
                 onChange={(e) => setNewRoom(prev => ({ ...prev, description: e.target.value }))}
               />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="newRoomImage">
+              <Form.Label className="fw-bold">Image Path</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="/images/rooms/your-photo.jpg"
+                value={newRoom.imagePath}
+                onChange={(e) => setNewRoom(prev => ({ ...prev, imagePath: e.target.value }))}
+              />
+              <Form.Text className="text-muted">
+                Place images in <code>frontend/public/images/rooms/</code>
+              </Form.Text>
             </Form.Group>
             <Form.Label className="fw-bold mb-2">Amenities</Form.Label>
             <div className="mb-3">

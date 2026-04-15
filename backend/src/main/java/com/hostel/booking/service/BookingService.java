@@ -34,6 +34,8 @@ import java.util.stream.Collectors;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
+    private final com.hostel.room.repository.PricingTierRepository pricingTierRepository;
+    private final com.hostel.room.repository.RoomEventRepository roomEventRepository;
     private final RoomService roomService;
     private final UserService userService;
     private final EmailService emailService;
@@ -70,9 +72,34 @@ public class BookingService {
                     "Room " + roomInfo.getRoomNumber() + " already has bookings during the requested period");
         }
 
+        // Check for Room Events (Group Assignment - US 09)
+        List<com.hostel.room.entity.RoomEvent> events = roomEventRepository.findOverlappingEvents(
+                request.getRoomId(), request.getStartDate(), request.getEndDate());
+        if (!events.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "This room is reserved for a special event: " + events.get(0).getEventName());
+        }
+
         long numberOfNights = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
-        BigDecimal totalPrice = roomInfo.getPricePerNight()
-                .multiply(BigDecimal.valueOf(numberOfNights));
+        
+        // Dynamic Pricing Logic (Season/Demand - US 13)
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        LocalDate currentDate = request.getStartDate();
+        while (currentDate.isBefore(request.getEndDate())) {
+            BigDecimal dayPrice = roomInfo.getPricePerNight();
+            
+            // Check for active pricing tiers on this specific date
+            List<com.hostel.room.entity.PricingTier> tiers = pricingTierRepository
+                    .findActiveByRoomIdAndDate(request.getRoomId(), currentDate);
+            
+            if (!tiers.isEmpty()) {
+                // Apply the first active multiplier
+                dayPrice = dayPrice.multiply(tiers.get(0).getPriceMultiplier());
+            }
+            
+            totalPrice = totalPrice.add(dayPrice);
+            currentDate = currentDate.plusDays(1);
+        }
 
         String bookingRef = "BK-" + LocalDate.now().getYear() + "-" +
                 UUID.randomUUID().toString().substring(0, 8).toUpperCase();

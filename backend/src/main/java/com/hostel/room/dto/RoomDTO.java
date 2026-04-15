@@ -27,4 +27,6 @@ public class RoomDTO {
     private java.time.LocalDate maintenanceEndDate;
     private java.time.LocalDate occupiedStartDate;
     private java.time.LocalDate occupiedEndDate;
+    private List<PricingTierDTO> pricingTiers;
+    private BigDecimal currentPrice;
 }

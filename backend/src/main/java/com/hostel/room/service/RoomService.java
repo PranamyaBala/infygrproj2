@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @Slf4j
 @Service
@@ -56,6 +57,13 @@ public class RoomService {
 
         return rooms.stream()
                 .map(this::mapToDTO)
+                .filter(dto -> {
+                    // If user searched for AVAILABLE rooms, hide rooms that are dynamically marked OCCUPIED (due to events)
+                    if (status == RoomStatus.AVAILABLE && RoomStatus.OCCUPIED.name().equals(dto.getStatus())) {
+                        return false;
+                    }
+                    return true;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -280,6 +288,36 @@ public class RoomService {
                     .collect(Collectors.toList());
             dto.setAmenities(amenityDTOs);
         }
+
+        // Populate Pricing Tiers (US 13)
+        List<PricingTier> tiers = pricingTierRepository.findByRoomId(room.getId());
+        BigDecimal currentPrice = room.getPricePerNight();
+        java.time.LocalDate today = java.time.LocalDate.now();
+
+        if (tiers != null && !tiers.isEmpty()) {
+            List<PricingTierDTO> tierDTOs = tiers.stream()
+                    .map(t -> {
+                        if (!today.isBefore(t.getStartDate()) && !today.isAfter(t.getEndDate())) {
+                            dto.setCurrentPrice(room.getPricePerNight().multiply(t.getPriceMultiplier()));
+                        }
+                        return modelMapper.map(t, PricingTierDTO.class);
+                    })
+                    .collect(Collectors.toList());
+            dto.setPricingTiers(tierDTOs);
+        }
+
+        if (dto.getCurrentPrice() == null) {
+            dto.setCurrentPrice(room.getPricePerNight());
+        }
+
+        // Logic: If room is AVAILABLE but has an event/booking today, mark as OCCUPIED (US 09)
+        if (RoomStatus.AVAILABLE.name().equals(dto.getStatus())) {
+            boolean hasEventToday = roomEventRepository.findOverlappingEvents(room.getId(), today, today).size() > 0;
+            if (hasEventToday) {
+                dto.setStatus(RoomStatus.OCCUPIED.name());
+            }
+        }
+
         return dto;
     }
 }

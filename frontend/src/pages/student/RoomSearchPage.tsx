@@ -12,6 +12,14 @@ import type { Room, Amenity, RoomSearchCriteria } from '../../types';
 
 const ROOM_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'SUITE', 'DORMITORY'];
 
+const ROOM_TYPE_IMAGES: Record<string, string> = {
+  'SINGLE': '/images/rooms/single_bed.jpg',
+  'DOUBLE': '/images/rooms/double_bed.jpg',
+  'TRIPLE': '/images/rooms/triple_bed.jpg',
+  'SUITE': '/images/rooms/suite_bed.jpg',
+  'DORMITORY': '/images/rooms/dormitory_bed.jpg',
+};
+
 const amenityIconMap: Record<string, React.ReactNode> = {
   'WiFi': <FaWifi />,
   'Ensuite Bathroom': <FaBath />,
@@ -224,24 +232,36 @@ export default function RoomSearchPage() {
                     }}
                   >
                     <div
-                      className="card-img-top bg-gradient"
-                      style={{
-                        height: '160px',
-                        background: `linear-gradient(135deg, ${
-                          room.roomType === 'SUITE' ? '#667eea, #764ba2' :
-                          room.roomType === 'DOUBLE' ? '#f093fb, #f5576c' :
-                          room.roomType === 'TRIPLE' ? '#4facfe, #00f2fe' :
-                          room.roomType === 'DORMITORY' ? '#43e97b, #38f9d7' :
-                          '#a18cd1, #fbc2eb'
-                        })`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderTopLeftRadius: 'inherit',
-                        borderTopRightRadius: 'inherit'
-                      }}
+                      className="card-img-top position-relative overflow-hidden"
+                      style={{ height: '200px' }}
                     >
-                      <span style={{ fontSize: '3rem' }}>{getRoomTypeIcon(room.roomType)}</span>
+                      <img
+                        src={room.imagePath || ROOM_TYPE_IMAGES[room.roomType]}
+                        alt={`Room ${room.roomNumber}`}
+                        className="w-100 h-100 object-fit-cover transition-transform"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          // If current src is imagePath, try ROOM_TYPE_IMAGES fallback
+                          if (room.imagePath && target.src.includes(room.imagePath)) {
+                            target.src = ROOM_TYPE_IMAGES[room.roomType];
+                          } else {
+                            // Ultimate fallback to icons/gradients
+                            target.style.display = 'none';
+                            const parent = target.parentElement as HTMLElement;
+                            parent.style.background = `linear-gradient(135deg, ${
+                              room.roomType === 'SUITE' ? '#667eea, #764ba2' :
+                              room.roomType === 'DOUBLE' ? '#f093fb, #f5576c' :
+                              room.roomType === 'TRIPLE' ? '#4facfe, #00f2fe' :
+                              room.roomType === 'DORMITORY' ? '#43e97b, #38f9d7' :
+                              '#a18cd1, #fbc2eb'
+                            })`;
+                            const span = document.createElement('span');
+                            span.style.fontSize = '3rem';
+                            span.innerHTML = getRoomTypeIcon(room.roomType);
+                            parent.appendChild(span);
+                          }
+                        }}
+                      />
                     </div>
                     <Card.Body>
                       <div className="d-flex justify-content-between align-items-start mb-2">
@@ -272,8 +292,13 @@ export default function RoomSearchPage() {
                       )}
 
                       <div className="d-flex justify-content-between align-items-center mt-auto">
-                        <h5 className="text-primary fw-bold mb-0">₹{room.pricePerNight}</h5>
-                        <small className="text-muted">/night</small>
+                        <div>
+                          <h5 className="text-primary fw-bold mb-0">₹{room.currentPrice}</h5>
+                          <small className="text-muted">/night</small>
+                        </div>
+                        {room.currentPrice !== room.pricePerNight && (
+                          <Badge bg="warning" text="dark" style={{fontSize: '0.65rem'}}>Seasonal Rate</Badge>
+                        )}
                       </div>
                     </Card.Body>
                   </Card>

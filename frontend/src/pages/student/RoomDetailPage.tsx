@@ -13,6 +13,14 @@ import { bookingApi } from '../../api/bookingApi';
 import type { Room } from '../../types';
 import toast from 'react-hot-toast';
 
+const ROOM_TYPE_IMAGES: Record<string, string> = {
+  'SINGLE': '/images/rooms/single_bed.jpg',
+  'DOUBLE': '/images/rooms/double_bed.jpg',
+  'TRIPLE': '/images/rooms/triple_bed.jpg',
+  'SUITE': '/images/rooms/suite_bed.jpg',
+  'DORMITORY': '/images/rooms/dormitory_bed.jpg',
+};
+
 const amenityIcons: Record<string, React.ReactNode> = {
   'WiFi': <FaWifi size={20} />,
   'Ensuite Bathroom': <FaBath size={20} />,
@@ -114,6 +122,39 @@ export default function RoomDetailPage() {
     ? Math.ceil((new Date(bookingForm.endDate).getTime() - new Date(bookingForm.startDate).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
+  // US 13: Calculate Dynamic Total Price
+  const calculateTotalPrice = () => {
+    if (!room || !bookingForm.startDate || !bookingForm.endDate || nights <= 0) {
+      return 0;
+    }
+
+    let total = 0;
+    const start = new Date(bookingForm.startDate);
+    const end = new Date(bookingForm.endDate);
+    
+    // Iterate day by day to match backend logic
+    for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      let dayMultiplier = 1.0;
+      
+      if (room.pricingTiers) {
+        const activeTier = room.pricingTiers.find(t => 
+          dateStr >= t.startDate && dateStr <= t.endDate
+        );
+        if (activeTier) {
+          dayMultiplier = activeTier.priceMultiplier;
+        }
+      }
+      
+      total += room.pricePerNight * dayMultiplier;
+    }
+    
+    return total;
+  };
+
+  const dynamicTotal = calculateTotalPrice();
+  const isSeasonal = nights > 0 && dynamicTotal !== (room.pricePerNight * nights);
+
   return (
     <Container className="py-4">
       <Button variant="outline-secondary" className="mb-3" onClick={() => navigate('/rooms')}>
@@ -124,28 +165,45 @@ export default function RoomDetailPage() {
         <Col lg={7}>
           {/* Room Image */}
           <Card className="border-0 shadow-sm mb-4 overflow-hidden">
-            <div
+            <img
+              src={room.imagePath || ROOM_TYPE_IMAGES[room.roomType]}
+              alt={`Room ${room.roomNumber}`}
               style={{
-                height: '400px',
-                background: `linear-gradient(135deg, ${
-                  room.roomType === 'SUITE' ? '#667eea, #764ba2' :
-                  room.roomType === 'DOUBLE' ? '#f093fb, #f5576c' :
-                  room.roomType === 'TRIPLE' ? '#4facfe, #00f2fe' :
-                  room.roomType === 'DORMITORY' ? '#43e97b, #38f9d7' :
-                  '#a18cd1, #fbc2eb'
-                })`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                height: '450px',
+                width: '100%',
+                objectFit: 'cover'
               }}
-            >
-              <div className="text-center text-white">
-                <span style={{ fontSize: '5rem' }}>
-                  {room.roomType === 'SUITE' ? '🏨' : room.roomType === 'DORMITORY' ? '🏢' : '🛏️'}
-                </span>
-                <h3 className="mt-2 fw-bold">Room {room.roomNumber}</h3>
-              </div>
-            </div>
+              onError={(e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                if (room.imagePath && target.src.includes(room.imagePath)) {
+                  target.src = ROOM_TYPE_IMAGES[room.roomType];
+                } else {
+                  target.style.display = 'none';
+                  const parent = target.parentElement as HTMLElement;
+                  parent.style.height = '400px';
+                  parent.style.display = 'flex';
+                  parent.style.alignItems = 'center';
+                  parent.style.justifyContent = 'center';
+                  parent.style.background = `linear-gradient(135deg, ${
+                    room.roomType === 'SUITE' ? '#667eea, #764ba2' :
+                    room.roomType === 'DOUBLE' ? '#f093fb, #f5576c' :
+                    room.roomType === 'TRIPLE' ? '#4facfe, #00f2fe' :
+                    room.roomType === 'DORMITORY' ? '#43e97b, #38f9d7' :
+                    '#a18cd1, #fbc2eb'
+                  })`;
+                  
+                  const inner = document.createElement('div');
+                  inner.className = 'text-center text-white';
+                  inner.innerHTML = `
+                    <span style="font-size: 5rem;">${
+                      room.roomType === 'SUITE' ? '🏨' : room.roomType === 'DORMITORY' ? '🏢' : '🛏️'
+                    }</span>
+                    <h3 class="mt-2 fw-bold">Room ${room.roomNumber}</h3>
+                  `;
+                  parent.appendChild(inner);
+                }
+              }}
+            />
           </Card>
 
           {/* Description */}
@@ -197,8 +255,11 @@ export default function RoomDetailPage() {
                   </Badge>
                 </div>
                 <div className="text-end">
-                  <h3 className="text-primary fw-bold mb-0">₹{room.pricePerNight}</h3>
+                  <h3 className="text-primary fw-bold mb-0">₹{room.currentPrice}</h3>
                   <small className="text-muted">per night</small>
+                  {room.currentPrice !== room.pricePerNight && (
+                    <div className="text-muted text-decoration-line-through small">₹{room.pricePerNight}</div>
+                  )}
                 </div>
               </div>
 
@@ -263,7 +324,12 @@ export default function RoomDetailPage() {
                 <strong>Room {room.roomNumber}</strong>
                 <span className="text-muted ms-2">({room.roomType})</span>
               </div>
-              <strong className="text-primary">₹{room.pricePerNight}/night</strong>
+              <div className="text-end">
+                <strong className="text-primary d-block">₹{room.currentPrice}/night</strong>
+                {room.currentPrice !== room.pricePerNight && (
+                  <small className="text-muted text-decoration-line-through">₹{room.pricePerNight}</small>
+                )}
+              </div>
             </div>
           </div>
 
@@ -320,10 +386,24 @@ export default function RoomDetailPage() {
             </Form.Group>
 
             {nights > 0 && (
-              <div className="bg-light rounded p-3 mb-3">
-                <div className="d-flex justify-content-between">
-                  <span>₹{room.pricePerNight} × {nights} night{nights > 1 ? 's' : ''}</span>
-                  <strong className="text-primary fs-5">₹{(room.pricePerNight * nights).toFixed(2)}</strong>
+              <div className="bg-light rounded p-3 mb-3 border border-primary border-opacity-25">
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <span>₹{room.pricePerNight} × {nights} night{nights > 1 ? 's' : ''}</span>
+                    {isSeasonal && (
+                      <Badge bg="warning" text="dark" className="d-block mt-1">
+                        Seasonal Rate Applied
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-end">
+                    <strong className="text-primary fs-4">₹{dynamicTotal.toFixed(2)}</strong>
+                    {isSeasonal && (
+                      <small className="d-block text-muted text-decoration-line-through">
+                        ₹{(room.pricePerNight * nights).toFixed(2)}
+                      </small>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

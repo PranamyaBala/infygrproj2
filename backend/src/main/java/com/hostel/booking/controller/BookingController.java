@@ -45,4 +45,13 @@ public class BookingController {
         BookingDTO booking = bookingService.getBookingById(id);
         return ResponseEntity.ok(booking);
     }
+
+    @PutMapping("/{id}/late-checkout")
+    @Operation(summary = "Request late checkout (US 14)", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<BookingDTO> requestLateCheckout(
+            @PathVariable Long id,
+            @RequestBody com.hostel.booking.dto.LateCheckoutRequest request) {
+        BookingDTO booking = bookingService.handleLateCheckout(id, request);
+        return ResponseEntity.ok(booking);
+    }
 }

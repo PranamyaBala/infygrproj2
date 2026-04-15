@@ -38,6 +38,7 @@ public class AdminSeeder implements CommandLineRunner {
         seedAdminUser();
         seedStudentUser();
         seedAmenities();
+        seedRoomImages();
         seedSampleBookings();
     }
 
@@ -85,6 +86,23 @@ public class AdminSeeder implements CommandLineRunner {
             );
             amenityRepository.saveAll(defaultAmenities);
             log.info("===> DEFAULT AMENITIES SEEDED <===");
+        }
+    }
+
+    private void seedRoomImages() {
+        List<Room> rooms = roomRepository.findAll();
+        boolean updated = false;
+        for (Room room : rooms) {
+            if (room.getImagePath() == null || room.getImagePath().isEmpty()) {
+                String type = room.getRoomType().toString();
+                String path = "/images/rooms/" + type.toLowerCase() + "_bed.jpg";
+                room.setImagePath(path);
+                updated = true;
+            }
+        }
+        if (updated) {
+            roomRepository.saveAll(rooms);
+            log.info("===> ROOM IMAGE PATHS UPDATED TO DEFAULTS <===");
         }
     }
 

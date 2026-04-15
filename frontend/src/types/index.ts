@@ -64,6 +64,8 @@ export interface Room {
   occupiedStartDate?: string;
   occupiedEndDate?: string;
   amenities?: Amenity[];
+  pricingTiers?: PricingTier[];
+  currentPrice: number;
 }
 
 export interface Amenity {

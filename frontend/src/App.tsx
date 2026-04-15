@@ -22,6 +22,8 @@ import PreferencesPage from './pages/student/PreferencesPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import BookingManagementPage from './pages/admin/BookingManagementPage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
+import PricingTierManagement from './pages/admin/PricingTierManagement';
+import RoomEventsManagement from './pages/admin/RoomEventsManagement';
 
 // Styles
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -60,6 +62,12 @@ function AppRoutes() {
         } />
         <Route path="/admin/reports" element={
           <ProtectedRoute adminOnly><AdminReportsPage /></ProtectedRoute>
+        } />
+        <Route path="/admin/rooms/:roomId/pricing" element={
+          <ProtectedRoute adminOnly><PricingTierManagement /></ProtectedRoute>
+        } />
+        <Route path="/admin/rooms/:roomId/events" element={
+          <ProtectedRoute adminOnly><RoomEventsManagement /></ProtectedRoute>
         } />
       </Route>
 

@@ -26,7 +26,7 @@ export const bookingApi = {
     apiClient.put<Booking>(`/api/admin/bookings/${id}/status`, data),
 
   handleLateCheckout: (id: number, data: LateCheckoutRequest) =>
-    apiClient.put<Booking>(`/api/admin/bookings/${id}/late-checkout`, data),
+    apiClient.put<Booking>(`/api/bookings/${id}/late-checkout`, data),
 
   getOccupancyReport: (startDate: string, endDate: string) =>
     apiClient.get<OccupancyReport[]>(
