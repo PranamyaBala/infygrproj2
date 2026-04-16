@@ -211,7 +211,9 @@ public class UserService {
             }
         }
 
-        user.setProfilePicturePath(filePath.toString());
+        // Store URL-friendly path (relative to the backend origin)
+        String webPath = "/uploads/profiles/" + filename;
+        user.setProfilePicturePath(webPath);
         User updatedUser = userRepository.save(user);
         log.info("Profile picture uploaded for user: {}", email);
 

@@ -6,6 +6,7 @@ import {
   FaUser, FaEnvelope, FaPhone, FaSave, FaCamera, FaTrash
 } from 'react-icons/fa';
 import { userApi } from '../../api/userApi';
+import { API_BASE_URL } from '../../api/client';
 import type { User } from '../../types';
 import toast from 'react-hot-toast';
 
@@ -99,10 +100,29 @@ export default function ProfilePage() {
           <Card className="border-0 shadow-sm text-center">
             <Card.Body className="p-4">
               <div
-                className="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto mb-3"
-                style={{ width: '120px', height: '120px', fontSize: '3rem', color: 'white' }}
+                className="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 overflow-hidden border shadow-sm"
+                style={{ width: '120px', height: '120px', backgroundColor: '#f8f9fa' }}
               >
-                {profile?.firstName?.charAt(0)}{profile?.lastName?.charAt(0)}
+                {profile?.profilePicturePath ? (
+                  <img 
+                    src={`${API_BASE_URL}${profile.profilePicturePath}`} 
+                    alt="Profile" 
+                    className="w-100 h-100 object-fit-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      (e.target as HTMLImageElement).parentElement!.classList.add('bg-primary');
+                      (e.target as HTMLImageElement).parentElement!.innerHTML = `
+                        <div style="font-size: 3rem; color: white;">
+                          ${profile?.firstName?.charAt(0)}${profile?.lastName?.charAt(0)}
+                        </div>
+                      `;
+                    }}
+                  />
+                ) : (
+                  <div className="bg-primary w-100 h-100 d-flex align-items-center justify-content-center" style={{ fontSize: '3rem', color: 'white' }}>
+                    {profile?.firstName?.charAt(0)}{profile?.lastName?.charAt(0)}
+                  </div>
+                )}
               </div>
               <h5 className="fw-bold">{profile?.firstName} {profile?.lastName}</h5>
               <p className="text-muted">{profile?.email}</p>
