@@ -13,4 +13,5 @@ public class AmenityDTO {
     private String name;
     private String icon;
     private String description;
+    private java.math.BigDecimal price;
 }

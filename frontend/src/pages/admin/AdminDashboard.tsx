@@ -14,6 +14,22 @@ import toast from 'react-hot-toast';
 
 const ROOM_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'SUITE', 'DORMITORY'];
 
+const ROOM_TYPE_PRICES: Record<string, number> = {
+  'SINGLE': 100,
+  'DOUBLE': 200,
+  'TRIPLE': 300,
+  'SUITE': 1000,
+  'DORMITORY': 50
+};
+
+const ROOM_TYPE_CAPACITIES: Record<string, number> = {
+  'SINGLE': 1,
+  'DOUBLE': 2,
+  'TRIPLE': 3,
+  'SUITE': 4,
+  'DORMITORY': 6
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -25,9 +41,18 @@ export default function AdminDashboard() {
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [newRoom, setNewRoom] = useState<CreateRoomRequest>({
     roomNumber: '', roomType: 'SINGLE', floor: 1, capacity: 1,
-    pricePerNight: 50, description: '', imagePath: '', amenityIds: []
+    pricePerNight: 100, description: '', imagePath: '', amenityIds: []
   });
   const [addingRoom, setAddingRoom] = useState(false);
+
+  // Edit Room Modal
+  const [showEditRoom, setShowEditRoom] = useState(false);
+  const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
+  const [editRoomData, setEditRoomData] = useState<CreateRoomRequest>({
+    roomNumber: '', roomType: 'SINGLE', floor: 1, capacity: 1,
+    pricePerNight: 100, description: '', imagePath: '', amenityIds: []
+  });
+  const [updatingRoom, setUpdatingRoom] = useState(false);
 
   // Status Update Modal
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -37,6 +62,60 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Auto-calculate price based on type and amenities
+  useEffect(() => {
+    const basePrice = ROOM_TYPE_PRICES[newRoom.roomType] || 0;
+    setNewRoom(prev => ({ ...prev, pricePerNight: basePrice }));
+  }, [newRoom.roomType, amenities]);
+
+  const calculateTotal = (roomData: CreateRoomRequest) => {
+    return (roomData.pricePerNight || 0) + (roomData.amenityIds || []).reduce((sum, id) => {
+      const amenity = amenities.find(a => a.id === id);
+      return sum + (amenity?.price || 0);
+    }, 0);
+  };
+
+  const calculatedTotal = calculateTotal(newRoom);
+  const calculatedEditTotal = calculateTotal(editRoomData);
+
+  // Auto-calculate price based on type (Edit)
+  useEffect(() => {
+    const basePrice = ROOM_TYPE_PRICES[editRoomData.roomType] || 0;
+    setEditRoomData(prev => ({ ...prev, pricePerNight: basePrice }));
+  }, [editRoomData.roomType, amenities]);
+
+  // Auto-set capacity based on room type
+  useEffect(() => {
+    const capacity = ROOM_TYPE_CAPACITIES[newRoom.roomType] || 1;
+    setNewRoom(prev => ({ ...prev, capacity }));
+  }, [newRoom.roomType]);
+
+  // Auto-set capacity based on room type (Edit)
+  useEffect(() => {
+    const capacity = ROOM_TYPE_CAPACITIES[editRoomData.roomType] || 1;
+    setEditRoomData(prev => ({ ...prev, capacity }));
+  }, [editRoomData.roomType]);
+
+  // Auto-infer floor from room number (e.g., 101 -> floor 1)
+  useEffect(() => {
+    if (newRoom.roomNumber && newRoom.roomNumber.length >= 1) {
+      const firstDigit = parseInt(newRoom.roomNumber.charAt(0));
+      if (!isNaN(firstDigit) && firstDigit > 0) {
+        setNewRoom(prev => ({ ...prev, floor: firstDigit }));
+      }
+    }
+  }, [newRoom.roomNumber]);
+
+  // Auto-infer floor from room number (Edit)
+  useEffect(() => {
+    if (editRoomData.roomNumber && editRoomData.roomNumber.length >= 1) {
+      const firstDigit = parseInt(editRoomData.roomNumber.charAt(0));
+      if (!isNaN(firstDigit) && firstDigit > 0) {
+        setEditRoomData(prev => ({ ...prev, floor: firstDigit }));
+      }
+    }
+  }, [editRoomData.roomNumber]);
 
   const loadData = async () => {
     try {
@@ -64,7 +143,36 @@ export default function AdminDashboard() {
       setAddingRoom(false);
     }
   };
+  const handleEditRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingRoomId === null) return;
+    setUpdatingRoom(true);
+    try {
+      await roomApi.updateRoom(editingRoomId, editRoomData);
+      toast.success('Room updated successfully!');
+      setShowEditRoom(false);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update room.');
+    } finally {
+      setUpdatingRoom(false);
+    }
+  };
 
+  const openEditModal = (room: Room) => {
+    setEditingRoomId(room.id);
+    setEditRoomData({
+      roomNumber: room.roomNumber,
+      roomType: room.roomType,
+      floor: room.floor,
+      capacity: room.capacity,
+      pricePerNight: room.pricePerNight,
+      description: room.description || '',
+      imagePath: room.imagePath || '',
+      amenityIds: room.amenities?.map(a => a.id) || []
+    });
+    setShowEditRoom(true);
+  };
   const handleStatusUpdate = async () => {
     if (!selectedRoom) return;
     try {
@@ -179,10 +287,14 @@ export default function AdminDashboard() {
                   <td>{room.floor}</td>
                   <td>{room.capacity}</td>
                   <td>
-                    <div className="fw-bold text-primary">₹{room.currentPrice}</div>
-                    {room.currentPrice !== room.pricePerNight && (
-                      <small className="text-muted text-decoration-line-through" style={{ fontSize: '0.75rem' }}>₹{room.pricePerNight}</small>
-                    )}
+                    <div className="fw-bold text-primary">
+                      ₹{room.currentPrice}
+                      {room.currentPrice !== room.basePriceWithAmenities && (
+                        <small className="text-muted text-decoration-line-through ms-2 fw-normal">
+                          ₹{room.basePriceWithAmenities}
+                        </small>
+                      )}
+                    </div>
                   </td>
                   <td>{getStatusBadge(room.status)}</td>
                   <td>
@@ -197,6 +309,9 @@ export default function AdminDashboard() {
                   </td>
                   <td>
                     <div className="d-flex gap-2">
+                      <Button variant="outline-warning" size="sm" onClick={() => openEditModal(room)}>
+                        Edit
+                      </Button>
                       <Button variant="outline-primary" size="sm" onClick={() => openStatusModal(room)}>
                         Status
                       </Button>
@@ -325,8 +440,128 @@ export default function AdminDashboard() {
                 />
               ))}
             </div>
+            
+            <div className="bg-primary bg-opacity-10 p-3 rounded border border-primary border-opacity-25 mb-4">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="fw-bold mb-0 text-primary">Estimated Total Price</h6>
+                  <small className="text-muted">Room Base + Selected Amenities</small>
+                </div>
+                <h4 className="fw-bold mb-0 text-primary">₹{calculatedTotal.toFixed(2)}</h4>
+              </div>
+            </div>
             <Button variant="primary" type="submit" disabled={addingRoom} className="w-100">
               {addingRoom ? <Spinner animation="border" size="sm" /> : 'Create Room'}
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Edit Room Modal */}
+      <Modal show={showEditRoom} onHide={() => setShowEditRoom(false)} centered size="lg">
+        <Modal.Header closeButton className="bg-warning text-dark">
+          <Modal.Title><FaWrench className="me-2" />Edit Room Details</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleEditRoom}>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="editRoomNumber">
+                  <Form.Label className="fw-bold">Room Number</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={editRoomData.roomNumber}
+                    onChange={(e) => setEditRoomData(prev => ({ ...prev, roomNumber: e.target.value }))}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="editRoomType">
+                  <Form.Label className="fw-bold">Room Type</Form.Label>
+                  <Form.Select
+                    value={editRoomData.roomType}
+                    onChange={(e) => setEditRoomData(prev => ({ ...prev, roomType: e.target.value }))}
+                  >
+                    {ROOM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+            </Row>
+            <Row>
+              <Col md={4}>
+                <Form.Group className="mb-3" controlId="editRoomFloor">
+                  <Form.Label className="fw-bold">Floor</Form.Label>
+                  <Form.Control
+                    type="number" min={1}
+                    value={editRoomData.floor}
+                    onChange={(e) => setEditRoomData(prev => ({ ...prev, floor: parseInt(e.target.value) }))}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3" controlId="editRoomCapacity">
+                  <Form.Label className="fw-bold">Capacity</Form.Label>
+                  <Form.Control
+                    type="number" min={1}
+                    value={editRoomData.capacity}
+                    onChange={(e) => setEditRoomData(prev => ({ ...prev, capacity: parseInt(e.target.value) }))}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group className="mb-3" controlId="editRoomPrice">
+                  <Form.Label className="fw-bold">Price/Night (₹)</Form.Label>
+                  <Form.Control
+                    type="number" min={0} step="0.01"
+                    value={editRoomData.pricePerNight}
+                    onChange={(e) => setEditRoomData(prev => ({ ...prev, pricePerNight: parseFloat(e.target.value) }))}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+            <Form.Group className="mb-3" controlId="editRoomDescription">
+              <Form.Label className="fw-bold">Description</Form.Label>
+              <Form.Control
+                as="textarea" rows={2}
+                value={editRoomData.description}
+                onChange={(e) => setEditRoomData(prev => ({ ...prev, description: e.target.value }))}
+              />
+            </Form.Group>
+            <Form.Label className="fw-bold mb-2">Amenities</Form.Label>
+            <div className="mb-3">
+              {amenities.map(a => (
+                <Form.Check
+                  key={a.id} type="checkbox" inline
+                  id={`edit-amenity-${a.id}`} label={a.name}
+                  checked={editRoomData.amenityIds?.includes(a.id) || false}
+                  onChange={(e) => {
+                    setEditRoomData(prev => ({
+                      ...prev,
+                      amenityIds: e.target.checked
+                        ? [...(prev.amenityIds || []), a.id]
+                        : (prev.amenityIds || []).filter(id => id !== a.id)
+                    }));
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="bg-warning bg-opacity-10 p-3 rounded border border-warning border-opacity-25 mb-4">
+              <div className="d-flex justify-content-between align-items-center">
+                <div>
+                  <h6 className="fw-bold mb-0 text-warning">Updated Total Price</h6>
+                  <small className="text-muted">Room Base + Selected Amenities</small>
+                </div>
+                <h4 className="fw-bold mb-0 text-warning">₹{calculatedEditTotal.toFixed(2)}</h4>
+              </div>
+            </div>
+
+            <Button variant="warning" type="submit" disabled={updatingRoom} className="w-100 fw-bold">
+              {updatingRoom ? <Spinner animation="border" size="sm" /> : 'Update Room Details'}
             </Button>
           </Form>
         </Modal.Body>

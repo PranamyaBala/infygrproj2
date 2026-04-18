@@ -111,7 +111,7 @@ export default function MyBookingsPage() {
                   <div className="d-flex justify-content-between align-items-center">
                     <span className="text-muted">Total Price</span>
                     <h5 className="text-primary fw-bold mb-0">
-                      <FaMoneyBillWave className="me-1" />₹{booking.totalPrice}
+                      <FaMoneyBillWave className="me-1" />₹{booking.totalPrice + (booking.lateCheckoutFee || 0)}
                     </h5>
                   </div>
                 </Card.Body>

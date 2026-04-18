@@ -94,7 +94,7 @@ export default function PricingTierManagement() {
             <FaMoneyBillWave className="me-2 text-primary" />
             Pricing Tiers: Room {room.roomNumber}
           </h3>
-          <p className="text-muted mb-0">Base Price: ₹{room.pricePerNight} per night</p>
+          <p className="text-muted mb-0">Price: ₹{room.basePriceWithAmenities} per night</p>
         </div>
         <Button variant="primary" onClick={() => setShowAddModal(true)}>
           <FaCalendarPlus className="me-2" />Add Seasonal Rate
@@ -156,7 +156,7 @@ export default function PricingTierManagement() {
                           <Badge bg="info" className="text-white">{tier.priceMultiplier}x</Badge>
                         </td>
                         <td className="fw-bold text-primary">
-                          ₹{(room.pricePerNight * tier.priceMultiplier).toFixed(2)}
+                          ₹{(room.basePriceWithAmenities * tier.priceMultiplier).toFixed(2)}
                         </td>
                       </tr>
                     ))
@@ -221,7 +221,7 @@ export default function PricingTierManagement() {
                 required
               />
               <Form.Text className="text-muted">
-                Currently: ₹{(room.pricePerNight * (newTier.priceMultiplier || 1)).toFixed(2)} / night
+                Currently: ₹{(room.basePriceWithAmenities * (newTier.priceMultiplier || 1)).toFixed(2)} / night
               </Form.Text>
             </Form.Group>
             <Button variant="primary" type="submit" className="w-100 fw-bold" disabled={submitting}>

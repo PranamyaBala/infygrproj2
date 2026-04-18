@@ -24,4 +24,8 @@ public class Amenity {
 
     @Column(length = 255)
     private String description;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal price = java.math.BigDecimal.ZERO;
 }

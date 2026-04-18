@@ -146,14 +146,15 @@ export default function RoomDetailPage() {
         }
       }
       
-      total += room.pricePerNight * dayMultiplier;
+      
+      total += room.basePriceWithAmenities * dayMultiplier;
     }
     
     return total;
   };
 
   const dynamicTotal = calculateTotalPrice();
-  const isSeasonal = nights > 0 && dynamicTotal !== (room.pricePerNight * nights);
+  const isSeasonal = nights > 0 && dynamicTotal !== (room.basePriceWithAmenities * nights);
 
   return (
     <Container className="py-4">
@@ -256,10 +257,15 @@ export default function RoomDetailPage() {
                 </div>
                 <div className="text-end">
                   <h3 className="text-primary fw-bold mb-0">₹{room.currentPrice}</h3>
-                  <small className="text-muted">per night</small>
-                  {room.currentPrice !== room.pricePerNight && (
-                    <div className="text-muted text-decoration-line-through small">₹{room.pricePerNight}</div>
-                  )}
+                  <div className="d-flex flex-column align-items-end">
+                    <small className="text-muted">per night</small>
+                    {room.currentPrice !== room.basePriceWithAmenities && (
+                      <div className="text-muted text-decoration-line-through small">₹{room.basePriceWithAmenities}</div>
+                    )}
+                    {/* <Badge bg="light" text="dark" className="mt-1 border fw-normal" style={{ fontSize: '0.7rem' }}> */}
+                      {/* Base + Amenities: ₹{room.basePriceWithAmenities} */}
+                    {/* </Badge> */}
+                  </div>
                 </div>
               </div>
 
@@ -326,9 +332,6 @@ export default function RoomDetailPage() {
               </div>
               <div className="text-end">
                 <strong className="text-primary d-block">₹{room.currentPrice}/night</strong>
-                {room.currentPrice !== room.pricePerNight && (
-                  <small className="text-muted text-decoration-line-through">₹{room.pricePerNight}</small>
-                )}
               </div>
             </div>
           </div>
@@ -389,7 +392,7 @@ export default function RoomDetailPage() {
               <div className="bg-light rounded p-3 mb-3 border border-primary border-opacity-25">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <span>₹{room.pricePerNight} × {nights} night{nights > 1 ? 's' : ''}</span>
+                    <span>₹{room.basePriceWithAmenities} × {nights} night{nights > 1 ? 's' : ''}</span>
                     {isSeasonal && (
                       <Badge bg="warning" text="dark" className="d-block mt-1">
                         Seasonal Rate Applied
@@ -398,11 +401,6 @@ export default function RoomDetailPage() {
                   </div>
                   <div className="text-end">
                     <strong className="text-primary fs-4">₹{dynamicTotal.toFixed(2)}</strong>
-                    {isSeasonal && (
-                      <small className="d-block text-muted text-decoration-line-through">
-                        ₹{(room.pricePerNight * nights).toFixed(2)}
-                      </small>
-                    )}
                   </div>
                 </div>
               </div>

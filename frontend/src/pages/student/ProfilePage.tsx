@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import { userApi } from '../../api/userApi';
 import { API_BASE_URL } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 import type { User } from '../../types';
 import toast from 'react-hot-toast';
 
@@ -19,6 +20,8 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', phone: '', email: ''
   });
+
+  const { updateUser } = useAuth();
 
   useEffect(() => {
     loadProfile();
@@ -51,6 +54,11 @@ export default function ProfilePage() {
     try {
       const res = await userApi.updateProfile(formData);
       setProfile(res.data);
+      updateUser({
+        firstName: res.data.firstName,
+        lastName: res.data.lastName,
+        email: res.data.email
+      });
       toast.success('Profile updated successfully!');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to update profile.');

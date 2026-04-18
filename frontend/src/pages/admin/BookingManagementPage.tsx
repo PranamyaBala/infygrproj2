@@ -161,7 +161,14 @@ export default function BookingManagementPage() {
                         <small>{formatDate(b.startDate)}<br/>{formatDate(b.endDate)}</small>
                       </td>
                       <td>{b.occupants}</td>
-                      <td className="fw-bold">₹{b.totalPrice}</td>
+                      <td>
+                        <div className="fw-bold text-dark">₹{b.totalPrice + (b.lateCheckoutFee || 0)}</div>
+                        {b.lateCheckoutRequested && (
+                          <Badge bg="warning" text="dark" style={{ fontSize: '0.65rem' }}>
+                            +₹{b.lateCheckoutFee} Late Fee
+                          </Badge>
+                        )}
+                      </td>
                       <td>{getStatusBadge(b.status)}</td>
                       <td>
                         <div className="d-flex gap-1 flex-wrap">

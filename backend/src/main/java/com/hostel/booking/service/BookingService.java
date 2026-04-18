@@ -86,7 +86,7 @@ public class BookingService {
         BigDecimal totalPrice = BigDecimal.ZERO;
         LocalDate currentDate = request.getStartDate();
         while (currentDate.isBefore(request.getEndDate())) {
-            BigDecimal dayPrice = roomInfo.getPricePerNight();
+            BigDecimal dayPrice = roomInfo.getBasePriceWithAmenities();
             
             // Check for active pricing tiers on this specific date
             List<com.hostel.room.entity.PricingTier> tiers = pricingTierRepository

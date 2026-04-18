@@ -243,7 +243,7 @@ public class RoomService {
             throw new IllegalArgumentException("Start date must be before end date");
         }
 
-        // Check for overlapping events
+        // 1. Check for overlapping events
         List<RoomEvent> overlapping = roomEventRepository.findOverlappingEvents(
                 roomId, dto.getStartDate(), dto.getEndDate());
 
@@ -255,6 +255,7 @@ public class RoomService {
                     "Room has overlapping events: " + conflictingEvents);
         }
 
+        // 2. Build and Save the event
         RoomEvent event = RoomEvent.builder()
                 .room(room)
                 .eventName(dto.getEventName())
@@ -264,8 +265,13 @@ public class RoomService {
                 .build();
 
         RoomEvent saved = roomEventRepository.save(event);
+        
+        // 3. Manual Control Implementation: Persist OCCUPIED status in DB
+        room.setStatus(RoomStatus.OCCUPIED);
+        roomRepository.save(room);
+        
         log.info("Room {} assigned to event '{}' ({} - {})",
-                room.getRoomNumber(), dto.getEventName(), dto.getStartDate(), dto.getEndDate());
+                room.getRoomNumber(), event.getEventName(), event.getStartDate(), event.getEndDate());
 
         dto.setId(saved.getId());
         return dto;
@@ -291,14 +297,23 @@ public class RoomService {
 
         // Populate Pricing Tiers (US 13)
         List<PricingTier> tiers = pricingTierRepository.findByRoomId(room.getId());
-        BigDecimal currentPrice = room.getPricePerNight();
+        
+        // Cumulative Pricing: Base Room Price + Sum(Amenity Prices)
+        java.math.BigDecimal combinedBasePrice = room.getPricePerNight();
+        if (room.getAmenities() != null) {
+            for (Amenity a : room.getAmenities()) {
+                combinedBasePrice = combinedBasePrice.add(a.getPrice() != null ? a.getPrice() : java.math.BigDecimal.ZERO);
+            }
+        }
+        
         java.time.LocalDate today = java.time.LocalDate.now();
+        final java.math.BigDecimal finalBasePrice = combinedBasePrice;
 
         if (tiers != null && !tiers.isEmpty()) {
             List<PricingTierDTO> tierDTOs = tiers.stream()
                     .map(t -> {
                         if (!today.isBefore(t.getStartDate()) && !today.isAfter(t.getEndDate())) {
-                            dto.setCurrentPrice(room.getPricePerNight().multiply(t.getPriceMultiplier()));
+                            dto.setCurrentPrice(finalBasePrice.multiply(t.getPriceMultiplier()));
                         }
                         return modelMapper.map(t, PricingTierDTO.class);
                     })
@@ -306,16 +321,10 @@ public class RoomService {
             dto.setPricingTiers(tierDTOs);
         }
 
-        if (dto.getCurrentPrice() == null) {
-            dto.setCurrentPrice(room.getPricePerNight());
-        }
+        dto.setBasePriceWithAmenities(finalBasePrice);
 
-        // Logic: If room is AVAILABLE but has an event/booking today, mark as OCCUPIED (US 09)
-        if (RoomStatus.AVAILABLE.name().equals(dto.getStatus())) {
-            boolean hasEventToday = roomEventRepository.findOverlappingEvents(room.getId(), today, today).size() > 0;
-            if (hasEventToday) {
-                dto.setStatus(RoomStatus.OCCUPIED.name());
-            }
+        if (dto.getCurrentPrice() == null) {
+            dto.setCurrentPrice(finalBasePrice);
         }
 
         return dto;

@@ -8,6 +8,7 @@ import {
   FaSnowflake, FaBuilding, FaRedo, FaDoorOpen
 } from 'react-icons/fa';
 import { roomApi } from '../../api/roomApi';
+import { userApi } from '../../api/userApi';
 import type { Room, Amenity, RoomSearchCriteria } from '../../types';
 
 const ROOM_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'SUITE', 'DORMITORY'];
@@ -38,8 +39,23 @@ export default function RoomSearchPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadAmenities();
-    searchRooms();
+    const init = async () => {
+      setLoading(true);
+      await loadAmenities();
+      const prefs = await loadPreferences();
+      // Use loaded preferences or current criteria for the initial search
+      const initialCriteria = prefs ? {
+        status: 'AVAILABLE',
+        roomType: prefs.preferredRoomType || undefined,
+        floor: prefs.preferredFloor || undefined,
+        minPrice: prefs.preferredMinPrice || undefined,
+        maxPrice: prefs.preferredMaxPrice || undefined,
+        amenities: prefs.preferredAmenities || undefined
+      } : { status: 'AVAILABLE' };
+      
+      await searchRooms(initialCriteria as RoomSearchCriteria);
+    };
+    init();
   }, []);
 
   const loadAmenities = async () => {
@@ -47,6 +63,29 @@ export default function RoomSearchPage() {
       const res = await roomApi.getAllAmenities();
       setAmenities(res.data);
     } catch { /* ignore */ }
+  };
+
+  const loadPreferences = async () => {
+    try {
+      const res = await userApi.getPreferences();
+      const prefs = res.data;
+      if (prefs) {
+        setCriteria(prev => ({
+          ...prev,
+          roomType: prefs.preferredRoomType || prev.roomType,
+          floor: prefs.preferredFloor || prev.floor,
+          minPrice: prefs.preferredMinPrice || prev.minPrice,
+          maxPrice: prefs.preferredMaxPrice || prev.maxPrice,
+        }));
+        if (prefs.preferredAmenities && prefs.preferredAmenities.length > 0) {
+          setSelectedAmenities(prefs.preferredAmenities);
+        }
+        return prefs;
+      }
+    } catch {
+      // Just ignore if unauthorized or no preferences
+    }
+    return null;
   };
 
   const searchRooms = async (searchCriteria?: RoomSearchCriteria) => {
@@ -296,7 +335,7 @@ export default function RoomSearchPage() {
                           <h5 className="text-primary fw-bold mb-0">₹{room.currentPrice}</h5>
                           <small className="text-muted">/night</small>
                         </div>
-                        {room.currentPrice !== room.pricePerNight && (
+                        {room.currentPrice !== room.basePriceWithAmenities && (
                           <Badge bg="warning" text="dark" style={{fontSize: '0.65rem'}}>Seasonal Rate</Badge>
                         )}
                       </div>

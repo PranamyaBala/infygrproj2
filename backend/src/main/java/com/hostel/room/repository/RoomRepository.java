@@ -43,4 +43,7 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
 
     @Query("SELECT r FROM Room r LEFT JOIN FETCH r.amenities LEFT JOIN FETCH r.pricingTiers WHERE r.id = :id")
     Optional<Room> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT r FROM Room r LEFT JOIN FETCH r.amenities")
+    List<Room> findAllWithAmenities();
 }

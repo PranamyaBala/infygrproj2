@@ -66,6 +66,7 @@ export interface Room {
   amenities?: Amenity[];
   pricingTiers?: PricingTier[];
   currentPrice: number;
+  basePriceWithAmenities: number;
 }
 
 export interface Amenity {
@@ -73,6 +74,7 @@ export interface Amenity {
   name: string;
   icon?: string;
   description?: string;
+  price?: number;
 }
 
 export interface RoomSearchCriteria {

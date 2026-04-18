@@ -29,4 +29,5 @@ public class RoomDTO {
     private java.time.LocalDate occupiedEndDate;
     private List<PricingTierDTO> pricingTiers;
     private BigDecimal currentPrice;
+    private BigDecimal basePriceWithAmenities;
 }
