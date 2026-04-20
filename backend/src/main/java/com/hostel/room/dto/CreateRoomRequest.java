@@ -21,6 +21,7 @@ public class CreateRoomRequest {
 
     @NotNull(message = "Please provide a valid floor")
     @Min(value = 1, message = "Floor must be at least 1")
+    @Max(value = 4, message = "Maximum floor allowed is 4")
     private Integer floor;
 
     @NotNull(message = "Please provide a valid capacity")

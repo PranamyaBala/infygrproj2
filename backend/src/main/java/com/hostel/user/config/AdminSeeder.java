@@ -40,6 +40,7 @@ public class AdminSeeder implements CommandLineRunner {
         seedAmenities();
         seedRoomPrices();
         seedRoomImages();
+        seedFloorPlans();
         seedSampleBookings();
         fixExistingBookingPrices();
     }
@@ -148,6 +149,24 @@ public class AdminSeeder implements CommandLineRunner {
         if (updated) {
             roomRepository.saveAll(rooms);
             log.info("===> ROOM IMAGE PATHS UPDATED TO DEFAULTS <===");
+        }
+    }
+
+    private void seedFloorPlans() {
+        List<Room> rooms = roomRepository.findAll();
+        boolean updated = false;
+        for (Room room : rooms) {
+            if (room.getFloorPlanPath() == null || room.getFloorPlanPath().isEmpty() || room.getFloorPlanPath().contains(".jpg")) {
+                int floor = room.getFloor();
+                String suffix = (floor == 1) ? "st" : (floor == 2) ? "nd" : (floor == 3) ? "rd" : "th";
+                String path = "/images/floors/" + floor + suffix + "_floor.png";
+                room.setFloorPlanPath(path);
+                updated = true;
+            }
+        }
+        if (updated) {
+            roomRepository.saveAll(rooms);
+            log.info("===> ROOM FLOOR PLAN PATHS UPDATED (PNG) <===");
         }
     }
 

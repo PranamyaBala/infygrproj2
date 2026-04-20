@@ -12,6 +12,8 @@ import { roomApi } from '../../api/roomApi';
 import { bookingApi } from '../../api/bookingApi';
 import type { Room } from '../../types';
 import toast from 'react-hot-toast';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { FaSearchPlus, FaSearchMinus, FaExpand, FaIcons } from 'react-icons/fa';
 
 const ROOM_TYPE_IMAGES: Record<string, string> = {
   'SINGLE': '/images/rooms/single_bed.jpg',
@@ -165,46 +167,71 @@ export default function RoomDetailPage() {
       <Row>
         <Col lg={7}>
           {/* Room Image */}
-          <Card className="border-0 shadow-sm mb-4 overflow-hidden">
-            <img
-              src={room.imagePath || ROOM_TYPE_IMAGES[room.roomType]}
-              alt={`Room ${room.roomNumber}`}
-              style={{
-                height: '450px',
-                width: '100%',
-                objectFit: 'cover'
-              }}
-              onError={(e) => {
-                const target = e.currentTarget as HTMLImageElement;
-                if (room.imagePath && target.src.includes(room.imagePath)) {
-                  target.src = ROOM_TYPE_IMAGES[room.roomType];
-                } else {
-                  target.style.display = 'none';
-                  const parent = target.parentElement as HTMLElement;
-                  parent.style.height = '400px';
-                  parent.style.display = 'flex';
-                  parent.style.alignItems = 'center';
-                  parent.style.justifyContent = 'center';
-                  parent.style.background = `linear-gradient(135deg, ${
-                    room.roomType === 'SUITE' ? '#667eea, #764ba2' :
-                    room.roomType === 'DOUBLE' ? '#f093fb, #f5576c' :
-                    room.roomType === 'TRIPLE' ? '#4facfe, #00f2fe' :
-                    room.roomType === 'DORMITORY' ? '#43e97b, #38f9d7' :
-                    '#a18cd1, #fbc2eb'
-                  })`;
-                  
-                  const inner = document.createElement('div');
-                  inner.className = 'text-center text-white';
-                  inner.innerHTML = `
-                    <span style="font-size: 5rem;">${
-                      room.roomType === 'SUITE' ? '🏨' : room.roomType === 'DORMITORY' ? '🏢' : '🛏️'
-                    }</span>
-                    <h3 class="mt-2 fw-bold">Room ${room.roomNumber}</h3>
-                  `;
-                  parent.appendChild(inner);
-                }
-              }}
-            />
+          <Card className="border-0 shadow-sm mb-4 overflow-hidden position-relative">
+            <TransformWrapper
+              initialScale={1}
+              minScale={1}
+              maxScale={3}
+              centerOnInit={true}
+            >
+              {({ zoomIn, zoomOut, resetTransform }) => (
+                <>
+                  <div className="position-absolute top-0 end-0 m-3 z-3 d-flex gap-1">
+                    <Button variant="light" size="sm" className="shadow-sm border rounded-circle p-2" onClick={() => zoomIn()}>
+                      <FaSearchPlus />
+                    </Button>
+                    <Button variant="light" size="sm" className="shadow-sm border rounded-circle p-2" onClick={() => zoomOut()}>
+                      <FaSearchMinus />
+                    </Button>
+                    <Button variant="light" size="sm" className="shadow-sm border rounded-circle p-2" onClick={() => resetTransform()}>
+                      <FaExpand />
+                    </Button>
+                  </div>
+                  <TransformComponent wrapperStyle={{ width: '100%', height: '450px' }}>
+                    <img
+                      src={room.imagePath || ROOM_TYPE_IMAGES[room.roomType]}
+                      alt={`Room ${room.roomNumber}`}
+                      style={{
+                        height: '450px',
+                        width: '100%',
+                        maxWidth: 'none',
+                        objectFit: 'cover',
+                        cursor: 'zoom-in'
+                      }}
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        if (room.imagePath && target.src.includes(room.imagePath)) {
+                          target.src = ROOM_TYPE_IMAGES[room.roomType];
+                        } else {
+                          target.style.display = 'none';
+                          const parent = target.parentElement as HTMLElement;
+                          parent.style.height = '400px';
+                          parent.style.display = 'flex';
+                          parent.style.alignItems = 'center';
+                          parent.style.justifyContent = 'center';
+                          parent.style.background = `linear-gradient(135deg, ${
+                            room.roomType === 'SUITE' ? '#667eea, #764ba2' :
+                            room.roomType === 'DOUBLE' ? '#f093fb, #f5576c' :
+                            room.roomType === 'TRIPLE' ? '#4facfe, #00f2fe' :
+                            room.roomType === 'DORMITORY' ? '#43e97b, #38f9d7' :
+                            '#a18cd1, #fbc2eb'
+                          })`;
+                          const inner = document.createElement('div');
+                          inner.className = 'text-center text-white';
+                          inner.innerHTML = `
+                            <span style="font-size: 5rem;">${
+                              room.roomType === 'SUITE' ? '🏨' : room.roomType === 'DORMITORY' ? '🏢' : '🛏️'
+                            }</span>
+                            <h3 class="mt-2 fw-bold">Room ${room.roomNumber}</h3>
+                          `;
+                          parent.appendChild(inner);
+                        }
+                      }}
+                    />
+                  </TransformComponent>
+                </>
+              )}
+            </TransformWrapper>
           </Card>
 
           {/* Description */}
@@ -242,6 +269,52 @@ export default function RoomDetailPage() {
               </Card.Body>
             </Card>
           )}
+
+          {/* Floor Plan (US 16) */}
+          <Card className="border-0 shadow-sm mb-4 overflow-hidden position-relative">
+            <Card.Body>
+              <h5 className="fw-bold mb-3">Floor Plan</h5>
+              <TransformWrapper
+                initialScale={1}
+                minScale={1}
+                maxScale={4}
+                centerOnInit={true}
+              >
+                {({ zoomIn, zoomOut, resetTransform }) => (
+                  <div className="bg-light rounded p-0 text-center position-relative overflow-hidden" style={{ minHeight: '300px' }}>
+                    <div className="position-absolute top-0 end-0 m-2 z-3 d-flex flex-column gap-1">
+                      <Button variant="dark" size="sm" className="bg-opacity-50 border-0 p-2" onClick={() => zoomIn()}>
+                        <FaSearchPlus />
+                      </Button>
+                      <Button variant="dark" size="sm" className="bg-opacity-50 border-0 p-2" onClick={() => zoomOut()}>
+                        <FaSearchMinus />
+                      </Button>
+                      <Button variant="dark" size="sm" className="bg-opacity-50 border-0 p-2" onClick={() => resetTransform()}>
+                        <FaExpand />
+                      </Button>
+                    </div>
+                    <TransformComponent wrapperStyle={{ width: '100%', height: '100%', display: 'block' }}>
+                      <img 
+                        src={room.floorPlanPath || `/images/floors/${room.floor}${room.floor === 1 ? 'st' : room.floor === 2 ? 'nd' : room.floor === 3 ? 'rd' : 'th'}_floor.png`}
+                        alt={`Floor ${room.floor} Plan`}
+                        className="img-fluid"
+                        style={{ cursor: 'move', width: '100%', objectFit: 'contain', maxHeight: '500px' }}
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (!target.src.includes('placeholder_floor.png')) {
+                            target.src = '/images/floors/placeholder_floor.png';
+                          } else {
+                            target.style.display = 'none';
+                          }
+                        }}
+                      />
+                    </TransformComponent>
+                  </div>
+                )}
+              </TransformWrapper>
+              <p className="mt-2 text-muted small text-center mb-0">Drag to pan • Pinch or use icons to zoom</p>
+            </Card.Body>
+          </Card>
         </Col>
 
         {/* Room Info Sidebar */}

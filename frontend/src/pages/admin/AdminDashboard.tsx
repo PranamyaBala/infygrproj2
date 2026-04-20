@@ -30,6 +30,12 @@ const ROOM_TYPE_CAPACITIES: Record<string, number> = {
   'DORMITORY': 6
 };
 
+const getFloorPlanPath = (floor: number) => {
+  if (!floor || floor <= 0) return '';
+  const suffix = (floor === 1) ? 'st' : (floor === 2) ? 'nd' : (floor === 3) ? 'rd' : 'th';
+  return `/images/floors/${floor}${suffix}_floor.png`;
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -97,25 +103,43 @@ export default function AdminDashboard() {
     setEditRoomData(prev => ({ ...prev, capacity }));
   }, [editRoomData.roomType]);
 
-  // Auto-infer floor from room number (e.g., 101 -> floor 1)
+  // Auto-infer floor and floor plan from room number (e.g., 101 -> floor 1)
   useEffect(() => {
     if (newRoom.roomNumber && newRoom.roomNumber.length >= 1) {
       const firstDigit = parseInt(newRoom.roomNumber.charAt(0));
       if (!isNaN(firstDigit) && firstDigit > 0) {
-        setNewRoom(prev => ({ ...prev, floor: firstDigit }));
+        setNewRoom(prev => ({ 
+          ...prev, 
+          floor: firstDigit,
+          floorPlanPath: getFloorPlanPath(firstDigit)
+        }));
       }
     }
   }, [newRoom.roomNumber]);
 
-  // Auto-infer floor from room number (Edit)
+  // Update floor plan when floor is manually changed
+  useEffect(() => {
+    setNewRoom(prev => ({ ...prev, floorPlanPath: getFloorPlanPath(prev.floor || 1) }));
+  }, [newRoom.floor]);
+
+  // Auto-infer floor and floor plan from room number (Edit)
   useEffect(() => {
     if (editRoomData.roomNumber && editRoomData.roomNumber.length >= 1) {
       const firstDigit = parseInt(editRoomData.roomNumber.charAt(0));
       if (!isNaN(firstDigit) && firstDigit > 0) {
-        setEditRoomData(prev => ({ ...prev, floor: firstDigit }));
+        setEditRoomData(prev => ({ 
+          ...prev, 
+          floor: firstDigit,
+          floorPlanPath: getFloorPlanPath(firstDigit)
+        }));
       }
     }
   }, [editRoomData.roomNumber]);
+
+  // Update floor plan when floor is manually changed (Edit)
+  useEffect(() => {
+    setEditRoomData(prev => ({ ...prev, floorPlanPath: getFloorPlanPath(prev.floor || 1) }));
+  }, [editRoomData.floor]);
 
   const loadData = async () => {
     try {
@@ -137,6 +161,11 @@ export default function AdminDashboard() {
       setAddingRoom(false);
       return;
     }
+    if (newRoom.floor && newRoom.floor >= 5) {
+      toast.error('Maximum allowed floor is 4.');
+      setAddingRoom(false);
+      return;
+    }
     try {
       await roomApi.createRoom(newRoom);
       toast.success('Room created successfully!');
@@ -154,6 +183,11 @@ export default function AdminDashboard() {
     setUpdatingRoom(true);
     if (!editRoomData.amenityIds || editRoomData.amenityIds.length < 3) {
       toast.error('SRS Requirement: Please select at least 3 amenities.');
+      setUpdatingRoom(false);
+      return;
+    }
+    if (editRoomData.floor && editRoomData.floor >= 5) {
+      toast.error('Maximum allowed floor is 4.');
       setUpdatingRoom(false);
       return;
     }
