@@ -35,5 +35,7 @@ public class CreateRoomRequest {
     private String description;
     private String imagePath;
     private String floorPlanPath;
+    @NotNull(message = "Please select at least 3 amenities")
+    @Size(min = 3, message = "At least 3 amenities must be selected")
     private List<Long> amenityIds;
 }

@@ -132,6 +132,11 @@ export default function AdminDashboard() {
   const handleAddRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddingRoom(true);
+    if (!newRoom.amenityIds || newRoom.amenityIds.length < 3) {
+      toast.error('Please select at least 3 amenities.');
+      setAddingRoom(false);
+      return;
+    }
     try {
       await roomApi.createRoom(newRoom);
       toast.success('Room created successfully!');
@@ -147,6 +152,11 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (editingRoomId === null) return;
     setUpdatingRoom(true);
+    if (!editRoomData.amenityIds || editRoomData.amenityIds.length < 3) {
+      toast.error('SRS Requirement: Please select at least 3 amenities.');
+      setUpdatingRoom(false);
+      return;
+    }
     try {
       await roomApi.updateRoom(editingRoomId, editRoomData);
       toast.success('Room updated successfully!');
