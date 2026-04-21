@@ -25,8 +25,10 @@ export default function RegisterPage() {
     if (!formData.firstName.trim()) { setError('Please provide a valid first name'); return; }
     if (!formData.lastName.trim()) { setError('Please provide a valid last name'); return; }
     if (!formData.email.trim()) { setError('Please provide a valid email'); return; }
-    if (!formData.password.trim() || formData.password.length < 6) {
-      setError('Password must be at least 6 characters'); return;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!formData.password || !passwordRegex.test(formData.password)) {
+      setError('Password must be at least 8 characters and include uppercase, lowercase, number, and special character (@$!%*?&).');
+      return;
     }
 
     setLoading(true);
@@ -109,16 +111,19 @@ export default function RegisterPage() {
                     />
                   </Form.Group>
 
-                  <Form.Group className="mb-4" controlId="registerPassword">
+                    <Form.Group className="mb-4" controlId="registerPassword">
                     <Form.Label><FaLock className="me-2" />Password</Form.Label>
                     <Form.Control
                       type="password"
-                      placeholder="At least 6 characters"
+                      placeholder="8+ chars (incl. Uppercase, Number & Symbol)"
                       value={formData.password}
                       onChange={(e) => handleChange('password', e.target.value)}
                       required
-                      minLength={6}
+                      minLength={8}
                     />
+                    <Form.Text className="text-muted small">
+                      At least 8 characters with Uppercase, Lowercase, Number & Special Character (@$!%*?&).
+                    </Form.Text>
                   </Form.Group>
 
                   <Button

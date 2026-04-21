@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Navbar as BSNavbar, Nav, Container, Button, Badge } from 'react-bootstrap';
+import { Navbar as BSNavbar, Nav, Container, Button, Badge, Modal } from 'react-bootstrap';
 import { FaHotel, FaUser, FaSignOutAlt, FaTachometerAlt, FaSearch, FaCalendarAlt, FaCog } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 
@@ -8,8 +9,15 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = () => {
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
     logout();
+    setShowLogoutModal(false);
     navigate('/login');
   };
 
@@ -91,7 +99,7 @@ export default function Navbar() {
                 <Button
                   variant="outline-light"
                   size="sm"
-                  onClick={handleLogout}
+                  onClick={handleLogoutClick}
                   className="ms-2"
                 >
                   <FaSignOutAlt className="me-1" /> Logout
@@ -108,6 +116,24 @@ export default function Navbar() {
           </Nav>
         </BSNavbar.Collapse>
       </Container>
+
+      {/* Logout Confirmation Modal */}
+      <Modal show={showLogoutModal} onHide={() => setShowLogoutModal(false)} centered size="sm">
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fs-5 fw-bold">Confirm Logout</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="py-3">
+          Are you sure you want to log out of your session?
+        </Modal.Body>
+        <Modal.Footer className="border-0 pt-0">
+          <Button variant="light" onClick={() => setShowLogoutModal(false)} className="fw-semibold">
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={confirmLogout} className="fw-semibold">
+            Logout
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </BSNavbar>
   );
 }

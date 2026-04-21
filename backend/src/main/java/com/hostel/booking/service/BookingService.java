@@ -9,6 +9,7 @@ import com.hostel.booking.repository.BookingRepository;
 import com.hostel.notification.dto.BookingNotificationDTO;
 import com.hostel.notification.service.EmailService;
 import com.hostel.room.dto.RoomDTO;
+import com.hostel.room.dto.UpdateRoomStatusRequest;
 import com.hostel.room.service.RoomService;
 import com.hostel.user.dto.UserDTO;
 import com.hostel.user.service.UserService;
@@ -183,6 +184,25 @@ public class BookingService {
         log.info("Booking {} status changed: {} -> {}", booking.getBookingReference(), oldStatus, newStatus);
 
         BookingDTO dto = enrichBookingDTO(updated);
+
+        // US 04/US 05 Sync: Automate Room Status based on Booking Status
+        try {
+            if (newStatus == BookingStatus.CHECKED_IN) {
+                roomService.updateRoomStatus(booking.getRoomId(), UpdateRoomStatusRequest.builder()
+                        .status("OCCUPIED")
+                        .occupiedStartDate(booking.getStartDate())
+                        .occupiedEndDate(booking.getEndDate())
+                        .build());
+                log.info("Auto-sync: Room {} marked as OCCUPIED due to check-in", booking.getRoomId());
+            } else if (newStatus == BookingStatus.CHECKED_OUT) {
+                roomService.updateRoomStatus(booking.getRoomId(), UpdateRoomStatusRequest.builder()
+                        .status("AVAILABLE")
+                        .build());
+                log.info("Auto-sync: Room {} marked as AVAILABLE due to check-out", booking.getRoomId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to auto-sync room status for room {}: {}", booking.getRoomId(), e.getMessage());
+        }
 
         try {
             BookingNotificationDTO notifDto = mapToNotification(dto);
