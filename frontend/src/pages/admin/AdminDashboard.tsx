@@ -155,6 +155,15 @@ export default function AdminDashboard() {
 
   const handleAddRoom = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // SRS Constraint: Max 18 rooms per floor
+    const roomSeqStr = newRoom.roomNumber.slice(-2);
+    const roomSequence = parseInt(roomSeqStr);
+    if (isNaN(roomSequence) || roomSequence < 1 || roomSequence > 18) {
+      toast.error('Invalid Room Number: Sequence must be between 01 and 18 (e.g., 101 - 118).');
+      return;
+    }
+
     setAddingRoom(true);
     if (!newRoom.amenityIds || newRoom.amenityIds.length < 3) {
       toast.error('Please select at least 3 amenities.');
@@ -180,6 +189,15 @@ export default function AdminDashboard() {
   const handleEditRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingRoomId === null) return;
+
+    // SRS Constraint: Max 18 rooms per floor
+    const roomSeqStr = editRoomData.roomNumber.slice(-2);
+    const roomSequence = parseInt(roomSeqStr);
+    if (isNaN(roomSequence) || roomSequence < 1 || roomSequence > 18) {
+      toast.error('Invalid Room Number: Sequence must be between 01 and 18 (e.g., 101 - 118).');
+      return;
+    }
+
     setUpdatingRoom(true);
     if (!editRoomData.amenityIds || editRoomData.amenityIds.length < 3) {
       toast.error('SRS Requirement: Please select at least 3 amenities.');

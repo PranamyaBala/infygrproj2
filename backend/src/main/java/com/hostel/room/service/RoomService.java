@@ -87,6 +87,7 @@ public class RoomService {
 
     @Transactional
     public RoomDTO createRoom(CreateRoomRequest request) {
+        validateRoomNumberRange(request.getRoomNumber());
         if (roomRepository.existsByRoomNumber(request.getRoomNumber())) {
             throw new RoomAlreadyExistsException(request.getRoomNumber());
         }
@@ -117,6 +118,7 @@ public class RoomService {
 
     @Transactional
     public RoomDTO updateRoom(Long id, CreateRoomRequest request) {
+        validateRoomNumberRange(request.getRoomNumber());
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new RoomNotFoundException(id));
 
@@ -285,6 +287,25 @@ public class RoomService {
     }
 
     // ==================== HELPER ====================
+
+    private void validateRoomNumberRange(String roomNumber) {
+        try {
+            // Extract the last two digits (sequence)
+            int seq = Integer.parseInt(roomNumber.substring(roomNumber.length() - 2));
+            if (seq < 1 || seq > 18) {
+                throw new IllegalArgumentException("Room number must end with a sequence between 01 and 18 (e.g., 101 - 118).");
+            }
+            
+            // Basic check to ensure starting digit is roughly aligned with floor (optional but good practice)
+            // if (roomNumber.length() >= 3) {
+            //     int floorDigit = Character.getNumericValue(roomNumber.charAt(0));
+            //     // Additional checks could go here if needed
+            // }
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException) throw (IllegalArgumentException) e;
+            throw new IllegalArgumentException("Invalid room number format. Must end with a numerical sequence.");
+        }
+    }
 
     private RoomDTO mapToDTO(Room room) {
         RoomDTO dto = modelMapper.map(room, RoomDTO.class);

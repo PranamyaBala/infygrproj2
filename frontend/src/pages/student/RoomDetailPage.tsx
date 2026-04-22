@@ -13,7 +13,7 @@ import { bookingApi } from '../../api/bookingApi';
 import type { Room } from '../../types';
 import toast from 'react-hot-toast';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { FaSearchPlus, FaSearchMinus, FaExpand, FaIcons } from 'react-icons/fa';
+import { FaSearchPlus, FaSearchMinus, FaExpand } from 'react-icons/fa';
 
 const ROOM_TYPE_IMAGES: Record<string, string> = {
   'SINGLE': '/images/rooms/single_bed.jpg',
