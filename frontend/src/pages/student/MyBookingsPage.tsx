@@ -4,7 +4,7 @@ import {
   Container, Row, Col, Card, Badge, Spinner, Alert, Button
 } from 'react-bootstrap';
 import {
-  FaCalendarAlt, FaBed, FaClock, FaHashtag, FaMoneyBillWave, FaUsers
+  FaCalendarAlt, FaBed, FaClock, FaHashtag, FaMoneyBillWave, FaUsers, FaDownload
 } from 'react-icons/fa';
 import { bookingApi } from '../../api/bookingApi';
 import type { Booking } from '../../types';
@@ -42,6 +42,24 @@ export default function MyBookingsPage() {
     return new Date(dateStr).toLocaleDateString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric'
     });
+  };
+
+  const handleDownloadReceipt = async (e: React.MouseEvent, bookingId: number, roomNumber: string) => {
+    e.stopPropagation(); // Avoid card click navigation
+    try {
+      const response = await bookingApi.downloadReceipt(bookingId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Receipt_Room_${roomNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed', err);
+      // Fallback or toast if needed
+    }
   };
 
   if (loading) {
@@ -107,13 +125,23 @@ export default function MyBookingsPage() {
                     <FaUsers className="text-muted me-2" />
                     <span>{booking.occupants} occupant{booking.occupants > 1 ? 's' : ''}</span>
                   </div>
-                  <hr />
                   <div className="d-flex justify-content-between align-items-center">
                     <span className="text-muted">Total Price</span>
                     <h5 className="text-primary fw-bold mb-0">
                       <FaMoneyBillWave className="me-1" />₹{booking.totalPrice + (booking.lateCheckoutFee || 0)}
                     </h5>
                   </div>
+                  {['APPROVED', 'CHECKED_IN', 'CHECKED_OUT'].includes(booking.status) && (
+                    <div className="d-grid mt-3">
+                      <Button 
+                        variant="outline-primary" 
+                        size="sm"
+                        onClick={(e) => handleDownloadReceipt(e, booking.id, booking.roomNumber)}
+                      >
+                        <FaDownload className="me-2" />Download Receipt
+                      </Button>
+                    </div>
+                  )}
                 </Card.Body>
               </Card>
             </Col>

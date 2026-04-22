@@ -1,7 +1,7 @@
 import apiClient from './client';
 import type {
   Booking, CreateBookingRequest, UpdateBookingStatusRequest,
-  LateCheckoutRequest, OccupancyReport
+  LateCheckoutRequest, OccupancyReport, OccupiedDateRange
 } from '../types';
 
 export const bookingApi = {
@@ -35,4 +35,13 @@ export const bookingApi = {
 
   exportCsv: () =>
     apiClient.get('/api/admin/bookings/export/csv', { responseType: 'blob' }),
+
+  getOccupiedDates: (roomId: number) =>
+    apiClient.get<OccupiedDateRange[]>(`/api/bookings/room/${roomId}/occupied-dates`),
+
+  getAvailableBeds: (roomId: number, startDate: string, endDate: string) =>
+    apiClient.get<number>(`/api/bookings/room/${roomId}/available-beds?startDate=${startDate}&endDate=${endDate}`),
+
+  downloadReceipt: (id: number) =>
+    apiClient.get(`/api/bookings/${id}/receipt`, { responseType: 'blob' }),
 };

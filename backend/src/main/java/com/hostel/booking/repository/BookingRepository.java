@@ -44,4 +44,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Long> findDistinctRoomIdsWithBookingsInRange(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COALESCE(SUM(b.occupants), 0) FROM Booking b WHERE b.roomId = :roomId " +
+           "AND b.status IN ('APPROVED', 'CHECKED_IN') " +
+           "AND b.startDate <= :today AND b.endDate >= :today")
+    int sumActiveOccupants(@Param("roomId") Long roomId, @Param("today") LocalDate today);
 }

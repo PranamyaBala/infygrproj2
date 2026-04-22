@@ -18,6 +18,7 @@ public class RoomSearchCriteria {
     private BigDecimal minPrice;
     private BigDecimal maxPrice;
     private String status;
+    private Integer minCapacity;
     private Integer page;
     private Integer size;
 }

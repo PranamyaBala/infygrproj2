@@ -29,12 +29,14 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
            "WHERE (:roomType IS NULL OR r.roomType = :roomType) " +
            "AND (:floor IS NULL OR r.floor = :floor) " +
            "AND (:status IS NULL OR r.status = :status) " +
+           "AND (:minCapacity IS NULL OR r.capacity >= :minCapacity) " +
            "AND (:minPrice IS NULL OR r.pricePerNight >= :minPrice) " +
            "AND (:maxPrice IS NULL OR r.pricePerNight <= :maxPrice)")
     List<Room> searchRooms(
             @Param("roomType") RoomType roomType,
             @Param("floor") Integer floor,
             @Param("status") RoomStatus status,
+            @Param("minCapacity") Integer minCapacity,
             @Param("minPrice") BigDecimal minPrice,
             @Param("maxPrice") BigDecimal maxPrice);
 

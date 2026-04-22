@@ -1,5 +1,6 @@
 package com.hostel.room.service;
 
+import com.hostel.booking.repository.BookingRepository;
 import com.hostel.room.dto.*;
 import com.hostel.room.entity.*;
 import com.hostel.room.exception.RoomAlreadyExistsException;
@@ -26,6 +27,7 @@ public class RoomService {
     private final AmenityRepository amenityRepository;
     private final PricingTierRepository pricingTierRepository;
     private final RoomEventRepository roomEventRepository;
+    private final BookingRepository bookingRepository;
     private final ModelMapper modelMapper;
 
     // ==================== ROOM SEARCH (US 01) ====================
@@ -39,6 +41,7 @@ public class RoomService {
 
         List<Room> rooms = roomRepository.searchRooms(
                 roomType, criteria.getFloor(), status,
+                criteria.getMinCapacity(),
                 criteria.getMinPrice(), criteria.getMaxPrice());
 
         // Filter by amenities using streams
@@ -347,6 +350,10 @@ public class RoomService {
         if (dto.getCurrentPrice() == null) {
             dto.setCurrentPrice(finalBasePrice);
         }
+
+        // Calculate available beds: capacity - active occupants
+        int activeOccupants = bookingRepository.sumActiveOccupants(room.getId(), today);
+        dto.setAvailableBeds(Math.max(0, room.getCapacity() - activeOccupants));
 
         return dto;
     }

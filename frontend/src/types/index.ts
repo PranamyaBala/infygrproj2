@@ -67,6 +67,7 @@ export interface Room {
   pricingTiers?: PricingTier[];
   currentPrice: number;
   basePriceWithAmenities: number;
+  availableBeds?: number;
 }
 
 export interface Amenity {
@@ -84,6 +85,7 @@ export interface RoomSearchCriteria {
   minPrice?: number;
   maxPrice?: number;
   status?: string;
+  minCapacity?: number;
 }
 
 export interface CreateRoomRequest {
@@ -169,3 +171,9 @@ export interface OccupancyReport {
   occupancyRate: number;
   revenue: number;
 }
+
+export interface OccupiedDateRange {
+  startDate: string;
+  endDate: string;
+}
+

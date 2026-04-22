@@ -158,6 +158,19 @@ export default function RoomSearchPage() {
                   </Form.Select>
                 </Form.Group>
 
+                <Form.Group className="mb-3" controlId="filterCapacity">
+                  <Form.Label className="fw-bold"><FaUsers className="me-2" />Number of People</Form.Label>
+                  <Form.Control
+                    type="number"
+                    placeholder="Min people"
+                    min={1}
+                    value={criteria.minCapacity || ''}
+                    onChange={(e) => setCriteria(prev => ({
+                      ...prev, minCapacity: e.target.value ? parseInt(e.target.value) : undefined
+                    }))}
+                  />
+                </Form.Group>
+
                 <Form.Group className="mb-3" controlId="filterFloor">
                   <Form.Label className="fw-bold"><FaBuilding className="me-2" />Floor</Form.Label>
                   <Form.Control

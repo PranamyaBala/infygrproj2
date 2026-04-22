@@ -10,10 +10,13 @@ import {
 } from 'react-icons/fa';
 import { roomApi } from '../../api/roomApi';
 import { bookingApi } from '../../api/bookingApi';
-import type { Room } from '../../types';
+import type { Room, OccupiedDateRange } from '../../types';
 import toast from 'react-hot-toast';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { FaSearchPlus, FaSearchMinus, FaExpand } from 'react-icons/fa';
+import DatePicker from 'react-datepicker';
+import { parseISO, format as formatDateFns, addDays, isWithinInterval } from 'date-fns';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const ROOM_TYPE_IMAGES: Record<string, string> = {
   'SINGLE': '/images/rooms/single_bed.jpg',
@@ -40,8 +43,15 @@ export default function RoomDetailPage() {
 
   // Booking form state
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [bookingForm, setBookingForm] = useState({
-    startDate: '', endDate: '', occupants: 1, notes: ''
+  const [occupiedDates, setOccupiedDates] = useState<{ start: Date; end: Date }[]>([]);
+  const [availableBeds, setAvailableBeds] = useState<number | null>(null);
+  const [bookingForm, setBookingForm] = useState<{
+    startDate: Date | null;
+    endDate: Date | null;
+    occupants: number;
+    notes: string;
+  }>({
+    startDate: null, endDate: null, occupants: 1, notes: ''
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState('');
@@ -49,6 +59,57 @@ export default function RoomDetailPage() {
   useEffect(() => {
     loadRoom();
   }, [id]);
+
+  useEffect(() => {
+    if (showBookingModal && room) {
+      loadOccupiedDates();
+      // Reset occupants based on room type
+      if (room.roomType !== 'DORMITORY') {
+        setBookingForm(prev => ({ ...prev, occupants: room.capacity }));
+      }
+    }
+  }, [showBookingModal, room]);
+
+  useEffect(() => {
+    if (room && bookingForm.startDate && bookingForm.endDate) {
+      checkAvailability();
+    } else {
+      setAvailableBeds(null);
+    }
+  }, [bookingForm.startDate, bookingForm.endDate, room]);
+
+  const checkAvailability = async () => {
+    if (!room || !bookingForm.startDate || !bookingForm.endDate) return;
+    try {
+      const res = await bookingApi.getAvailableBeds(
+        room.id, 
+        formatDateFns(bookingForm.startDate, 'yyyy-MM-dd'),
+        formatDateFns(bookingForm.endDate, 'yyyy-MM-dd')
+      );
+      setAvailableBeds(res.data);
+      
+      // If currently selected occupants exceeds available, reset to 1
+      if (room.roomType === 'DORMITORY' && bookingForm.occupants > res.data) {
+        setBookingForm(prev => ({ ...prev, occupants: Math.min(1, res.data) }));
+      }
+    } catch (err) {
+      console.error('Failed to check availability', err);
+    }
+  };
+
+  const loadOccupiedDates = async () => {
+    if (!room) return;
+    try {
+      const res = await bookingApi.getOccupiedDates(room.id);
+      const intervals = res.data.map(range => ({
+        start: parseISO(range.startDate),
+        end: parseISO(range.endDate)
+      }));
+      setOccupiedDates(intervals);
+    } catch (err) {
+      console.error('Failed to load occupied dates', err);
+    }
+  };
 
   const loadRoom = async () => {
     setLoading(true);
@@ -67,27 +128,19 @@ export default function RoomDetailPage() {
     setBookingError('');
 
     if (!bookingForm.startDate) { setBookingError('Please provide a valid start date'); return; }
-    if (!bookingForm.endDate) { setBookingError('Please provide a valid end date'); return; }
-    if (bookingForm.startDate >= bookingForm.endDate) {
-      setBookingError('End date must be after start date'); return;
-    }
-    if (bookingForm.occupants < 1) { setBookingError('Please provide a valid number of occupants'); return; }
-    if (room && bookingForm.occupants > room.capacity) {
-      setBookingError(`Occupants cannot exceed room capacity (${room.capacity})`); return;
-    }
-
     setBookingLoading(true);
+
     try {
-      const response = await bookingApi.createBooking({
+      await bookingApi.createBooking({
         roomId: Number(id),
-        startDate: bookingForm.startDate,
-        endDate: bookingForm.endDate,
+        startDate: formatDateFns(bookingForm.startDate, 'yyyy-MM-dd'),
+        endDate: formatDateFns(bookingForm.endDate, 'yyyy-MM-dd'),
         occupants: bookingForm.occupants,
-        notes: bookingForm.notes || undefined,
+        notes: bookingForm.notes
       });
       toast.success('Booking request submitted successfully!');
       setShowBookingModal(false);
-      navigate(`/bookings/${response.data.id}`);
+      setBookingForm({ startDate: null, endDate: null, occupants: 1, notes: '' });
     } catch (err: any) {
       setBookingError(err.response?.data?.message || 'Failed to submit booking request.');
     } finally {
@@ -148,8 +201,14 @@ export default function RoomDetailPage() {
         }
       }
       
+      let dayPrice = room.basePriceWithAmenities * dayMultiplier;
       
-      total += room.basePriceWithAmenities * dayMultiplier;
+      // For Dorms, price is per bed (occupant). For others, it's per room.
+      if (room.roomType === 'DORMITORY') {
+        dayPrice *= bookingForm.occupants;
+      }
+      
+      total += dayPrice;
     }
     
     return total;
@@ -412,42 +471,75 @@ export default function RoomDetailPage() {
           <Form onSubmit={handleBookingSubmit}>
             <Row>
               <Col md={6}>
-                <Form.Group className="mb-3" controlId="bookingStartDate">
-                  <Form.Label className="fw-bold">Check-in Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={bookingForm.startDate}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setBookingForm(prev => ({ ...prev, startDate: e.target.value }))}
+                <Form.Group className="mb-4" controlId="bookingStartDate">
+                  <Form.Label className="fw-bold d-block">Check-in Date</Form.Label>
+                  <DatePicker
+                    selected={bookingForm.startDate}
+                    onChange={(date) => setBookingForm(prev => ({ ...prev, startDate: date, endDate: null }))}
+                    selectsStart
+                    startDate={bookingForm.startDate}
+                    endDate={bookingForm.endDate}
+                    minDate={new Date()}
+                    excludeDateIntervals={occupiedDates}
+                    placeholderText="Select check-in"
+                    className="form-control"
+                    dateFormat="yyyy-MM-dd"
                     required
                   />
                 </Form.Group>
               </Col>
               <Col md={6}>
-                <Form.Group className="mb-3" controlId="bookingEndDate">
-                  <Form.Label className="fw-bold">Check-out Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={bookingForm.endDate}
-                    min={bookingForm.startDate || new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setBookingForm(prev => ({ ...prev, endDate: e.target.value }))}
+                <Form.Group className="mb-4" controlId="bookingEndDate">
+                  <Form.Label className="fw-bold d-block">Check-out Date</Form.Label>
+                  <DatePicker
+                    selected={bookingForm.endDate}
+                    onChange={(date) => setBookingForm(prev => ({ ...prev, endDate: date }))}
+                    selectsEnd
+                    startDate={bookingForm.startDate}
+                    endDate={bookingForm.endDate}
+                    minDate={bookingForm.startDate || new Date()}
+                    excludeDateIntervals={occupiedDates}
+                    placeholderText="Select check-out"
+                    className="form-control"
+                    dateFormat="yyyy-MM-dd"
                     required
+                    disabled={!bookingForm.startDate}
+                    filterDate={(date) => {
+                      if (!bookingForm.startDate) return true;
+                      // Don't allow selecting an end date if there's a booking in between start and end
+                      const bookingInRange = occupiedDates.some(interval => 
+                        isWithinInterval(interval.start, { start: bookingForm.startDate!, end: date })
+                      );
+                      return !bookingInRange;
+                    }}
                   />
                 </Form.Group>
               </Col>
             </Row>
 
             <Form.Group className="mb-3" controlId="bookingOccupants">
-              <Form.Label className="fw-bold">Number of Occupants</Form.Label>
+              <Form.Label className="fw-bold">
+                Number of Occupants 
+                {room.roomType === 'DORMITORY' && availableBeds !== null && (
+                  <Badge bg="info" className="ms-2 fw-normal" style={{ fontSize: '0.75rem' }}>
+                    {availableBeds} beds available
+                  </Badge>
+                )}
+              </Form.Label>
               <Form.Control
                 type="number"
                 min={1}
-                max={room.capacity}
+                max={room.roomType === 'DORMITORY' ? (availableBeds || room.capacity) : room.capacity}
                 value={bookingForm.occupants}
                 onChange={(e) => setBookingForm(prev => ({ ...prev, occupants: parseInt(e.target.value) || 1 }))}
                 required
+                disabled={room.roomType !== 'DORMITORY'}
               />
-              <Form.Text className="text-muted">Max capacity: {room.capacity}</Form.Text>
+              <Form.Text className="text-muted">
+                {room.roomType === 'DORMITORY' 
+                  ? `Select up to ${availableBeds ?? room.capacity} beds in this shared room.` 
+                  : `Private room: Entire capacity (${room.capacity}) will be reserved.`}
+              </Form.Text>
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="bookingNotes">

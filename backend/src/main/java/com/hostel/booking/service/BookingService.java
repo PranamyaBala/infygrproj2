@@ -25,8 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,6 +40,7 @@ public class BookingService {
     private final UserService userService;
     private final EmailService emailService;
     private final ModelMapper modelMapper;
+    private final ReceiptService receiptService;
 
     // ==================== CREATE BOOKING (US 03) ====================
 
@@ -68,9 +68,25 @@ public class BookingService {
 
         List<Booking> overlapping = bookingRepository.findOverlappingBookings(
                 request.getRoomId(), request.getStartDate(), request.getEndDate());
-        if (!overlapping.isEmpty()) {
-            throw new BookingConflictException(
-                    "Room " + roomInfo.getRoomNumber() + " already has bookings during the requested period");
+
+        boolean isDorm = "DORMITORY".equalsIgnoreCase(roomInfo.getRoomType());
+
+        if (isDorm) {
+            // Dormitory Logic: Shared beds
+            int currentMaxOccupancy = calculateMaxConcurrentOccupancy(overlapping, request.getStartDate(), request.getEndDate());
+            if (currentMaxOccupancy + request.getOccupants() > roomInfo.getCapacity()) {
+                throw new BookingConflictException(
+                        "Not enough beds available in " + roomInfo.getRoomNumber() + 
+                        ". Requested: " + request.getOccupants() + ", Available: " + (roomInfo.getCapacity() - currentMaxOccupancy));
+            }
+        } else {
+            // Private Room Logic: One booking = Full Room
+            if (!overlapping.isEmpty()) {
+                throw new BookingConflictException(
+                        "Room " + roomInfo.getRoomNumber() + " is already booked for this period.");
+            }
+            // Force occupants to capacity for private rooms (US 15 - Intuitive Choice)
+            request.setOccupants(roomInfo.getCapacity());
         }
 
         // Check for Room Events (Group Assignment - US 09)
@@ -86,6 +102,7 @@ public class BookingService {
         // Dynamic Pricing Logic (Season/Demand - US 13)
         BigDecimal totalPrice = BigDecimal.ZERO;
         LocalDate currentDate = request.getStartDate();
+        
         while (currentDate.isBefore(request.getEndDate())) {
             BigDecimal dayPrice = roomInfo.getBasePriceWithAmenities();
             
@@ -96,6 +113,11 @@ public class BookingService {
             if (!tiers.isEmpty()) {
                 // Apply the first active multiplier
                 dayPrice = dayPrice.multiply(tiers.get(0).getPriceMultiplier());
+            }
+            
+            // For Dorms, price is per bed (occupant). For others, it's per room.
+            if (isDorm) {
+                dayPrice = dayPrice.multiply(BigDecimal.valueOf(request.getOccupants()));
             }
             
             totalPrice = totalPrice.add(dayPrice);
@@ -187,21 +209,49 @@ public class BookingService {
 
         // US 04/US 05 Sync: Automate Room Status based on Booking Status
         try {
+            RoomDTO roomInfo = roomService.getRoomById(booking.getRoomId());
+            boolean isDormRoom = "DORMITORY".equalsIgnoreCase(roomInfo.getRoomType());
+
             if (newStatus == BookingStatus.CHECKED_IN) {
-                roomService.updateRoomStatus(booking.getRoomId(), UpdateRoomStatusRequest.builder()
-                        .status("OCCUPIED")
-                        .occupiedStartDate(booking.getStartDate())
-                        .occupiedEndDate(booking.getEndDate())
-                        .build());
-                log.info("Auto-sync: Room {} marked as OCCUPIED due to check-in", booking.getRoomId());
+                boolean shouldMarkOccupied = true;
+                if (isDormRoom) {
+                    int currentOccupancy = calculateCurrentOccupancy(booking.getRoomId(), LocalDate.now());
+                    if (currentOccupancy < roomInfo.getCapacity()) {
+                        shouldMarkOccupied = false;
+                    }
+                }
+
+                if (shouldMarkOccupied) {
+                    roomService.updateRoomStatus(booking.getRoomId(), UpdateRoomStatusRequest.builder()
+                            .status("OCCUPIED")
+                            .occupiedStartDate(booking.getStartDate())
+                            .occupiedEndDate(booking.getEndDate())
+                            .build());
+                    log.info("Auto-sync: Room {} marked as OCCUPIED", booking.getRoomId());
+                }
             } else if (newStatus == BookingStatus.CHECKED_OUT) {
-                roomService.updateRoomStatus(booking.getRoomId(), UpdateRoomStatusRequest.builder()
-                        .status("AVAILABLE")
-                        .build());
-                log.info("Auto-sync: Room {} marked as AVAILABLE due to check-out", booking.getRoomId());
+                int remainingOccupancy = calculateCurrentOccupancy(booking.getRoomId(), LocalDate.now());
+                boolean makeAvailable = false;
+                
+                if (isDormRoom) {
+                    if (remainingOccupancy < roomInfo.getCapacity()) {
+                        makeAvailable = true;
+                    }
+                } else {
+                    if (remainingOccupancy == 0) {
+                        makeAvailable = true;
+                    }
+                }
+
+                if (makeAvailable) {
+                    roomService.updateRoomStatus(booking.getRoomId(), UpdateRoomStatusRequest.builder()
+                            .status("AVAILABLE")
+                            .build());
+                    log.info("Auto-sync: Room {} marked as AVAILABLE", booking.getRoomId());
+                }
             }
         } catch (Exception e) {
-            log.error("Failed to auto-sync room status for room {}: {}", booking.getRoomId(), e.getMessage());
+            log.error("Failed to auto-sync room status: {}", e.getMessage());
         }
 
         try {
@@ -210,7 +260,7 @@ public class BookingService {
                 case APPROVED -> emailService.sendBookingApprovedEmail(notifDto);
                 case REJECTED -> emailService.sendBookingRejectedEmail(notifDto);
                 case CHECKED_IN -> emailService.sendBookingConfirmedEmail(notifDto);
-                default -> { /* no notification for other statuses */ }
+                default -> { /* no notification */ }
             }
         } catch (Exception e) {
             log.warn("Could not send status change notification: {}", e.getMessage());
@@ -218,6 +268,8 @@ public class BookingService {
 
         return dto;
     }
+
+
 
     // ==================== LATE CHECKOUT (US 14) ====================
 
@@ -295,6 +347,68 @@ public class BookingService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<OccupiedDateRangeDTO> getOccupiedDateRanges(Long roomId) {
+        RoomDTO room = roomService.getRoomById(roomId);
+        boolean isDorm = "DORMITORY".equalsIgnoreCase(room.getRoomType());
+
+        List<BookingStatus> activeStatuses = List.of(
+            BookingStatus.PENDING,
+            BookingStatus.APPROVED, 
+            BookingStatus.CHECKED_IN
+        );
+
+        List<Booking> activeBookings = bookingRepository.findByRoomId(roomId).stream()
+                .filter(b -> activeStatuses.contains(b.getStatus()))
+                .collect(Collectors.toList());
+
+        if (!isDorm) {
+            // Private Room: Any booking blocks the room entirely
+            return activeBookings.stream()
+                    .map(b -> OccupiedDateRangeDTO.builder()
+                            .startDate(b.getStartDate())
+                            .endDate(b.getEndDate())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
+        // Shared Room (Dorm): Only block dates where occupancy >= capacity
+        if (activeBookings.isEmpty()) return Collections.emptyList();
+
+        // Scanline algorithm to find "Full" ranges
+        TreeMap<LocalDate, Integer> changes = new TreeMap<>();
+        for (Booking b : activeBookings) {
+            changes.put(b.getStartDate(), changes.getOrDefault(b.getStartDate(), 0) + b.getOccupants());
+            changes.put(b.getEndDate(), changes.getOrDefault(b.getEndDate(), 0) - b.getOccupants());
+        }
+
+        List<OccupiedDateRangeDTO> occupiedRanges = new ArrayList<>();
+        int currentOccupancy = 0;
+        LocalDate rangeStart = null;
+        int capacity = room.getCapacity();
+
+        for (Map.Entry<LocalDate, Integer> entry : changes.entrySet()) {
+            int prevOccupancy = currentOccupancy;
+            currentOccupancy += entry.getValue();
+            LocalDate currentDate = entry.getKey();
+
+            // Transition To Full
+            if (prevOccupancy < capacity && currentOccupancy >= capacity) {
+                rangeStart = currentDate;
+            }
+            // Transition Out Of Full
+            else if (prevOccupancy >= capacity && currentOccupancy < capacity && rangeStart != null) {
+                occupiedRanges.add(OccupiedDateRangeDTO.builder()
+                        .startDate(rangeStart)
+                        .endDate(currentDate)
+                        .build());
+                rangeStart = null;
+            }
+        }
+
+        return occupiedRanges;
+    }
+
     // ==================== CSV EXPORT (US 11) ====================
 
     @Transactional(readOnly = true)
@@ -340,6 +454,35 @@ public class BookingService {
 
     // ==================== HELPERS ====================
 
+    private int calculateMaxConcurrentOccupancy(List<Booking> bookings, LocalDate rangeStart, LocalDate rangeEnd) {
+        if (bookings == null || bookings.isEmpty()) return 0;
+        
+        int max = 0;
+        // Check day-by-day (simple sweep)
+        for (LocalDate date = rangeStart; date.isBefore(rangeEnd); date = date.plusDays(1)) {
+            final LocalDate current = date;
+            int dailyOccupancy = bookings.stream()
+                .filter(b -> (b.getStartDate().isBefore(current) || b.getStartDate().isEqual(current)) && 
+                             b.getEndDate().isAfter(current))
+                .filter(b -> b.getStatus() == BookingStatus.APPROVED || b.getStatus() == BookingStatus.CHECKED_IN || b.getStatus() == BookingStatus.PENDING)
+                .mapToInt(Booking::getOccupants)
+                .sum();
+            max = Math.max(max, dailyOccupancy);
+        }
+        return max;
+    }
+
+    private int calculateCurrentOccupancy(Long roomId, LocalDate date) {
+        List<Booking> active = bookingRepository.findByRoomId(roomId).stream()
+            .filter(b -> b.getStatus() == BookingStatus.CHECKED_IN)
+            .collect(Collectors.toList());
+            
+        return active.stream()
+            .filter(b -> !b.getStartDate().isAfter(date) && b.getEndDate().isAfter(date))
+            .mapToInt(Booking::getOccupants)
+            .sum();
+    }
+
     private void validateStatusTransition(BookingStatus from, BookingStatus to) {
         boolean valid = switch (from) {
             case PENDING -> to == BookingStatus.APPROVED || to == BookingStatus.REJECTED || to == BookingStatus.CANCELLED;
@@ -351,6 +494,20 @@ public class BookingService {
             throw new IllegalArgumentException("Invalid status transition: " + from + " -> " + to);
         }
     }
+
+    @Transactional(readOnly = true)
+    public int calculateRemainingCapacity(Long roomId, LocalDate startDate, LocalDate endDate) {
+        RoomDTO room = roomService.getRoomById(roomId);
+        List<Booking> overlapping = bookingRepository.findOverlappingBookings(roomId, startDate, endDate);
+        
+        if (!"DORMITORY".equalsIgnoreCase(room.getRoomType())) {
+            return overlapping.isEmpty() ? room.getCapacity() : 0;
+        }
+        
+        int maxOccupied = calculateMaxConcurrentOccupancy(overlapping, startDate, endDate);
+        return Math.max(0, room.getCapacity() - maxOccupied);
+    }
+
 
     private BookingDTO enrichBookingDTO(Booking booking) {
         RoomDTO room;
@@ -402,5 +559,25 @@ public class BookingService {
         notif.setNotes(dto.getNotes());
         notif.setCreatedAt(dto.getCreatedAt());
         return notif;
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] generateBookingReceipt(Long bookingId, String userEmail) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId));
+
+        // Security check
+        UserDTO student = userService.getProfile(userEmail);
+        if (!booking.getUserId().equals(student.getId())) {
+            throw new org.springframework.security.access.AccessDeniedException("Unauthorized to access this receipt");
+        }
+
+        // Status check - only for approved, checked_in, checked_out
+        if (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.REJECTED || booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new IllegalStateException("Receipt is only available for approved bookings");
+        }
+
+        RoomDTO room = roomService.getRoomById(booking.getRoomId());
+        return receiptService.generateReceipt(booking, room, student);
     }
 }

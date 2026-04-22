@@ -335,6 +335,7 @@ export default function AdminDashboard() {
                 <th>Type</th>
                 <th>Floor</th>
                 <th>Capacity</th>
+                <th>Available Beds</th>
                 <th>Price/Night</th>
                 <th>Status</th>
                 <th>Amenities</th>
@@ -348,6 +349,22 @@ export default function AdminDashboard() {
                   <td>{room.roomType}</td>
                   <td>{room.floor}</td>
                   <td>{room.capacity}</td>
+                  <td>
+                    {room.roomType === 'DORMITORY' ? (
+                      <Badge
+                        bg={
+                          room.availableBeds === 0 ? 'danger' :
+                          (room.availableBeds ?? 0) <= Math.floor(room.capacity / 3) ? 'warning' :
+                          'success'
+                        }
+                        className="fs-6"
+                      >
+                        {room.availableBeds ?? room.capacity} / {room.capacity}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
                   <td>
                     <div className="fw-bold text-primary">
                       ₹{room.currentPrice}

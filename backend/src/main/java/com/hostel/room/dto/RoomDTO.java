@@ -30,4 +30,5 @@ public class RoomDTO {
     private List<PricingTierDTO> pricingTiers;
     private BigDecimal currentPrice;
     private BigDecimal basePriceWithAmenities;
+    private Integer availableBeds;
 }
