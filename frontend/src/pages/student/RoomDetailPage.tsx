@@ -10,12 +10,12 @@ import {
 } from 'react-icons/fa';
 import { roomApi } from '../../api/roomApi';
 import { bookingApi } from '../../api/bookingApi';
-import type { Room, OccupiedDateRange } from '../../types';
+import type { Room } from '../../types';
 import toast from 'react-hot-toast';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { FaSearchPlus, FaSearchMinus, FaExpand } from 'react-icons/fa';
 import DatePicker from 'react-datepicker';
-import { parseISO, format as formatDateFns, addDays, isWithinInterval } from 'date-fns';
+import { parseISO, format as formatDateFns, isWithinInterval } from 'date-fns';
 import 'react-datepicker/dist/react-datepicker.css';
 
 const ROOM_TYPE_IMAGES: Record<string, string> = {
