@@ -215,7 +215,8 @@ export default function RoomDetailPage() {
   };
 
   const dynamicTotal = calculateTotalPrice();
-  const isSeasonal = nights > 0 && dynamicTotal !== (room.basePriceWithAmenities * nights);
+  const baseExpected = room.basePriceWithAmenities * nights * (room.roomType === 'DORMITORY' ? bookingForm.occupants : 1);
+  const isSeasonal = nights > 0 && Math.abs(dynamicTotal - baseExpected) > 0.01;
 
   return (
     <Container className="py-4">
