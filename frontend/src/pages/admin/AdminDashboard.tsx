@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container, Row, Col, Card, Table, Badge, Button, Form,
-  Spinner, Modal
+  Spinner, Modal, OverlayTrigger, Tooltip
 } from 'react-bootstrap';
 import {
   FaTachometerAlt, FaBed, FaUsers, FaCheckCircle,
@@ -383,7 +383,18 @@ export default function AdminDashboard() {
                       </Badge>
                     ))}
                     {room.amenities && room.amenities.length > 2 && (
-                      <Badge bg="light" text="dark" className="border">+{room.amenities.length - 2}</Badge>
+                      <OverlayTrigger
+                        placement="top"
+                        overlay={
+                          <Tooltip id={`amenity-tooltip-${room.id}`}>
+                            {room.amenities.slice(2).map(a => a.name).join(', ')}
+                          </Tooltip>
+                        }
+                      >
+                        <Badge bg="light" text="dark" className="border" style={{ cursor: 'pointer' }}>
+                          +{room.amenities.length - 2}
+                        </Badge>
+                      </OverlayTrigger>
                     )}
                   </td>
                   <td>
