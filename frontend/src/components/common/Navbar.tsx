@@ -3,11 +3,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Navbar as BSNavbar, Nav, Container, Button, Badge, Modal } from 'react-bootstrap';
 import { FaHotel, FaUser, FaSignOutAlt, FaTachometerAlt, FaSearch, FaCalendarAlt, FaCog } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
+import { useBookingNotifications } from '../../hooks/useBookingNotifications';
 
 export default function Navbar() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { unseenCount } = useBookingNotifications();
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -46,9 +48,19 @@ export default function Navbar() {
                 <Nav.Link
                   as={Link}
                   to="/bookings"
-                  className={isActive('/bookings') ? 'active' : ''}
+                  className={`position-relative ${isActive('/bookings') ? 'active' : ''}`}
                 >
                   <FaCalendarAlt className="me-1" /> My Bookings
+                  {unseenCount > 0 && (
+                    <Badge
+                      bg="danger"
+                      pill
+                      className="position-absolute translate-middle"
+                      style={{ top: '8px', right: '-6px', fontSize: '0.65rem' }}
+                    >
+                      {unseenCount}
+                    </Badge>
+                  )}
                 </Nav.Link>
                 <Nav.Link
                   as={Link}

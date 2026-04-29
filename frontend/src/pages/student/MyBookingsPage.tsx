@@ -8,15 +8,18 @@ import {
 } from 'react-icons/fa';
 import { bookingApi } from '../../api/bookingApi';
 import type { Booking } from '../../types';
+import { useBookingNotifications } from '../../hooks/useBookingNotifications';
 
 export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { markAllAsSeen } = useBookingNotifications();
 
   useEffect(() => {
     loadBookings();
+    markAllAsSeen();
   }, []);
 
   const loadBookings = async () => {
