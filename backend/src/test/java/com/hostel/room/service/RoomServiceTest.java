@@ -122,10 +122,10 @@ class RoomServiceTest {
         request.setFloor(2);
         request.setCapacity(1);
         request.setPricePerNight(BigDecimal.valueOf(200));
-        request.setAmenityIds(List.of(1L));
+        request.setAmenityIds(List.of(1L, 2L, 3L));
 
         when(roomRepository.existsByRoomNumber("201")).thenReturn(false);
-        when(amenityRepository.findByIdIn(List.of(1L))).thenReturn(List.of(testAmenity));
+        when(amenityRepository.findByIdIn(List.of(1L, 2L, 3L))).thenReturn(List.of(testAmenity));
         when(roomRepository.save(any(Room.class))).thenReturn(testRoom);
         when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
         when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());
@@ -168,10 +168,10 @@ class RoomServiceTest {
         request.setFloor(1);
         request.setCapacity(2);
         request.setPricePerNight(BigDecimal.valueOf(300));
-        request.setAmenityIds(List.of(1L));
+        request.setAmenityIds(List.of(1L, 2L, 3L));
 
         when(roomRepository.findById(1L)).thenReturn(Optional.of(testRoom));
-        when(amenityRepository.findByIdIn(List.of(1L))).thenReturn(List.of(testAmenity));
+        when(amenityRepository.findByIdIn(List.of(1L, 2L, 3L))).thenReturn(List.of(testAmenity));
         when(roomRepository.save(any(Room.class))).thenReturn(testRoom);
         when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
         when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());

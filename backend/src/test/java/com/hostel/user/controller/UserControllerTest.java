@@ -37,7 +37,9 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(userController)
+                .setControllerAdvice(new com.hostel.user.exception.GlobalExceptionHandler())
+                .build();
         objectMapper = new ObjectMapper();
     }
 

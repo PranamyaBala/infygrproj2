@@ -59,6 +59,7 @@ class AdminRoomControllerTest {
         request.setFloor(2);
         request.setCapacity(1);
         request.setPricePerNight(BigDecimal.valueOf(200));
+        request.setAmenityIds(List.of(1L, 2L, 3L));
 
         when(roomService.createRoom(any(CreateRoomRequest.class))).thenReturn(testRoomDTO);
 
@@ -78,6 +79,7 @@ class AdminRoomControllerTest {
         request.setFloor(1);
         request.setCapacity(2);
         request.setPricePerNight(BigDecimal.valueOf(300));
+        request.setAmenityIds(List.of(1L, 2L, 3L));
 
         when(roomService.updateRoom(eq(1L), any(CreateRoomRequest.class))).thenReturn(testRoomDTO);
 

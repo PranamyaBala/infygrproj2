@@ -109,7 +109,6 @@ class EmailServiceTest {
         ReflectionTestUtils.setField(emailService, "notificationsEnabled", true);
 
         MimeMessage mimeMessage = mock(MimeMessage.class);
-        when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
         when(templateEngine.process(anyString(), any())).thenThrow(new RuntimeException("Template error"));
 
         emailService.sendBookingSubmittedEmail(testNotification);
