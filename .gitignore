@@ -8,6 +8,7 @@ target/
 *.jar
 *.war
 *.log
+logs/
 
 # IDEs
 .idea/
