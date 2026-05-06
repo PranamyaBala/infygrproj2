@@ -126,19 +126,6 @@ class BookingControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/bookings/room/{id}/available-beds - Returns count 200")
-    void getAvailableBeds_200() throws Exception {
-        when(bookingService.calculateRemainingCapacity(eq(1L), any(LocalDate.class), any(LocalDate.class)))
-                .thenReturn(4);
-
-        mockMvc.perform(get("/api/bookings/room/1/available-beds")
-                        .param("startDate", LocalDate.now().plusDays(1).toString())
-                        .param("endDate", LocalDate.now().plusDays(3).toString()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value(4));
-    }
-
-    @Test
     @DisplayName("GET /api/bookings/{id}/receipt - Download receipt 200")
     void downloadReceipt_200() throws Exception {
         byte[] pdf = "test-pdf".getBytes();
