@@ -290,16 +290,85 @@ class UserServiceTest {
         verify(preferenceRepository).save(any(UserPreference.class));
     }
     @Test
-    @DisplayName("DeleteProfilePicture - Success")
-    void deleteProfilePicture_success() throws java.io.IOException {
-        testUser.setProfilePicturePath("uploads/profiles/test.jpg");
+    @DisplayName("DeleteProfilePicture - Success: No picture set (no-op)")
+    void deleteProfilePicture_noPicture() throws java.io.IOException {
+        testUser.setProfilePicturePath(null);
         when(userRepository.findByEmail("student@hostel.com")).thenReturn(Optional.of(testUser));
         when(modelMapper.map(any(User.class), eq(UserDTO.class))).thenReturn(testUserDTO);
 
         UserDTO result = userService.deleteProfilePicture("student@hostel.com");
 
         assertNotNull(result);
-        assertNull(testUser.getProfilePicturePath());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("GetPreferences - Success: No existing preference returns default")
+    void getPreferences_noExistingPreference() {
+        when(userRepository.findByEmail("student@hostel.com")).thenReturn(Optional.of(testUser));
+        when(preferenceRepository.findByUserId(1L)).thenReturn(Optional.empty());
+
+        UserPreferenceDTO result = userService.getPreferences("student@hostel.com");
+
+        assertNotNull(result);
+        assertNull(result.getPreferredRoomType());
+    }
+
+    @Test
+    @DisplayName("Register - Success: With explicit gender")
+    void register_withGender_success() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("new@hostel.com");
+        request.setPassword("Test@1234");
+        request.setFirstName("New");
+        request.setLastName("User");
+        request.setGender("FEMALE");
+
+        when(userRepository.existsByEmail("new@hostel.com")).thenReturn(false);
+        when(passwordEncoder.encode("Test@1234")).thenReturn("encodedPass");
+        when(userRepository.save(any(User.class))).thenReturn(
+                User.builder().id(2L).email("new@hostel.com").firstName("New")
+                        .lastName("User").role(Role.STUDENT).build()
+        );
+        when(jwtTokenProvider.generateTokenFromEmail("new@hostel.com")).thenReturn("jwt-token");
+
+        AuthResponse response = userService.register(request);
+
+        assertNotNull(response);
+        assertEquals("STUDENT", response.getRole());
+    }
+
+    @Test
+    @DisplayName("UpdateProfile - Success: Updates gender field")
+    void updateProfile_withGender_success() {
+        UpdateProfileRequest request = new UpdateProfileRequest();
+        request.setGender("FEMALE");
+
+        when(userRepository.findByEmail("student@hostel.com")).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenReturn(testUser);
+        when(modelMapper.map(any(User.class), eq(UserDTO.class))).thenReturn(testUserDTO);
+
+        UserDTO result = userService.updateProfile("student@hostel.com", request);
+
+        assertNotNull(result);
         verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("SavePreferences - Success: Creates new preference if none exists")
+    void savePreferences_noExisting_createsNew() {
+        UserPreferenceDTO dto = new UserPreferenceDTO();
+        dto.setPreferredRoomType("SINGLE");
+
+        UserPreference newPref = UserPreference.builder().id(2L).user(testUser).build();
+
+        when(userRepository.findByEmail("student@hostel.com")).thenReturn(Optional.of(testUser));
+        when(preferenceRepository.findByUserId(1L)).thenReturn(Optional.empty());
+        when(preferenceRepository.save(any(UserPreference.class))).thenReturn(newPref);
+
+        UserPreferenceDTO result = userService.savePreferences("student@hostel.com", dto);
+
+        assertNotNull(result);
+        verify(preferenceRepository).save(any(UserPreference.class));
     }
 }

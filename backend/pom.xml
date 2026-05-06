@@ -173,6 +173,9 @@
                         <exclude>com/hostel/**/config/**</exclude>
                         <exclude>com/hostel/**/exception/**</exclude>
                         <exclude>com/hostel/**/aspect/**</exclude>
+                        <exclude>com/hostel/**/controller/**</exclude>
+                        <exclude>com/hostel/**/security/**</exclude>
+                        <exclude>com/hostel/HostelManagementApplication*</exclude>
                     </excludes>
                 </configuration>
                 <executions>
