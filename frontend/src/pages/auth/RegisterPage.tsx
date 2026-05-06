@@ -8,7 +8,7 @@ import Footer from '../../components/common/Footer';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', password: '', phone: ''
+    firstName: '', lastName: '', email: '', password: '', phone: '', gender: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,6 +26,7 @@ export default function RegisterPage() {
     if (!formData.firstName.trim()) { setError('Please provide a valid first name'); return; }
     if (!formData.lastName.trim()) { setError('Please provide a valid last name'); return; }
     if (!formData.email.trim()) { setError('Please provide a valid email'); return; }
+    if (!formData.gender) { setError('Please select your gender'); return; }
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!formData.password || !passwordRegex.test(formData.password)) {
       setError('Password must be at least 8 characters and include uppercase, lowercase, number, and special character (@$!%*?&).');
@@ -111,6 +112,20 @@ export default function RegisterPage() {
                         value={formData.phone}
                         onChange={(e) => handleChange('phone', e.target.value)}
                       />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3" controlId="registerGender">
+                      <Form.Label><FaUser className="me-2" />Gender</Form.Label>
+                      <Form.Select
+                        value={formData.gender}
+                        onChange={(e) => handleChange('gender', e.target.value)}
+                        required
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="MALE">Male</option>
+                        <option value="FEMALE">Female</option>
+                        <option value="OTHER">Other</option>
+                      </Form.Select>
                     </Form.Group>
 
                       <Form.Group className="mb-4" controlId="registerPassword">

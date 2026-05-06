@@ -47,7 +47,7 @@ export default function AdminDashboard() {
   const [showAddRoom, setShowAddRoom] = useState(false);
   const [newRoom, setNewRoom] = useState<CreateRoomRequest>({
     roomNumber: '', roomType: 'SINGLE', floor: 1, capacity: 1,
-    pricePerNight: 100, description: '', imagePath: '', amenityIds: []
+    pricePerNight: 100, description: '', imagePath: '', amenityIds: [], genderPolicy: 'COED'
   });
   const [addingRoom, setAddingRoom] = useState(false);
 
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
   const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
   const [editRoomData, setEditRoomData] = useState<CreateRoomRequest>({
     roomNumber: '', roomType: 'SINGLE', floor: 1, capacity: 1,
-    pricePerNight: 100, description: '', imagePath: '', amenityIds: []
+    pricePerNight: 100, description: '', imagePath: '', amenityIds: [], genderPolicy: 'COED'
   });
   const [updatingRoom, setUpdatingRoom] = useState(false);
 
@@ -231,7 +231,8 @@ export default function AdminDashboard() {
       pricePerNight: room.pricePerNight,
       description: room.description || '',
       imagePath: room.imagePath || '',
-      amenityIds: room.amenities?.map(a => a.id) || []
+      amenityIds: room.amenities?.map(a => a.id) || [],
+      genderPolicy: room.genderPolicy || 'COED'
     });
     setShowEditRoom(true);
   };
@@ -458,7 +459,7 @@ export default function AdminDashboard() {
               </Col>
             </Row>
             <Row>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group className="mb-3" controlId="newRoomFloor">
                   <Form.Label className="fw-bold">Floor</Form.Label>
                   <Form.Control
@@ -469,7 +470,7 @@ export default function AdminDashboard() {
                   />
                 </Form.Group>
               </Col>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group className="mb-3" controlId="newRoomCapacity">
                   <Form.Label className="fw-bold">Capacity</Form.Label>
                   <Form.Control
@@ -480,7 +481,7 @@ export default function AdminDashboard() {
                   />
                 </Form.Group>
               </Col>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group className="mb-3" controlId="newRoomPrice">
                   <Form.Label className="fw-bold">Price/Night (₹)</Form.Label>
                   <Form.Control
@@ -489,6 +490,19 @@ export default function AdminDashboard() {
                     onChange={(e) => setNewRoom(prev => ({ ...prev, pricePerNight: parseFloat(e.target.value) }))}
                     required
                   />
+                </Form.Group>
+              </Col>
+              <Col md={3}>
+                <Form.Group className="mb-3" controlId="newRoomGenderPolicy">
+                  <Form.Label className="fw-bold">Gender Policy</Form.Label>
+                  <Form.Select
+                    value={newRoom.genderPolicy}
+                    onChange={(e) => setNewRoom(prev => ({ ...prev, genderPolicy: e.target.value }))}
+                  >
+                    <option value="COED">Co-Ed (Any)</option>
+                    <option value="MALE_ONLY">Boys Only</option>
+                    <option value="FEMALE_ONLY">Girls Only</option>
+                  </Form.Select>
                 </Form.Group>
               </Col>
             </Row>
@@ -579,7 +593,7 @@ export default function AdminDashboard() {
               </Col>
             </Row>
             <Row>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group className="mb-3" controlId="editRoomFloor">
                   <Form.Label className="fw-bold">Floor</Form.Label>
                   <Form.Control
@@ -590,7 +604,7 @@ export default function AdminDashboard() {
                   />
                 </Form.Group>
               </Col>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group className="mb-3" controlId="editRoomCapacity">
                   <Form.Label className="fw-bold">Capacity</Form.Label>
                   <Form.Control
@@ -601,7 +615,7 @@ export default function AdminDashboard() {
                   />
                 </Form.Group>
               </Col>
-              <Col md={4}>
+              <Col md={3}>
                 <Form.Group className="mb-3" controlId="editRoomPrice">
                   <Form.Label className="fw-bold">Price/Night (₹)</Form.Label>
                   <Form.Control
@@ -610,6 +624,19 @@ export default function AdminDashboard() {
                     onChange={(e) => setEditRoomData(prev => ({ ...prev, pricePerNight: parseFloat(e.target.value) }))}
                     required
                   />
+                </Form.Group>
+              </Col>
+              <Col md={3}>
+                <Form.Group className="mb-3" controlId="editRoomGenderPolicy">
+                  <Form.Label className="fw-bold">Gender Policy</Form.Label>
+                  <Form.Select
+                    value={editRoomData.genderPolicy}
+                    onChange={(e) => setEditRoomData(prev => ({ ...prev, genderPolicy: e.target.value }))}
+                  >
+                    <option value="COED">Co-Ed (Any)</option>
+                    <option value="MALE_ONLY">Boys Only</option>
+                    <option value="FEMALE_ONLY">Girls Only</option>
+                  </Form.Select>
                 </Form.Group>
               </Col>
             </Row>

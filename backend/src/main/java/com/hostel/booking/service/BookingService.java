@@ -60,6 +60,18 @@ public class BookingService {
             throw new IllegalArgumentException("Room is not available for booking");
         }
 
+        // Gender Policy Check
+        String userGender = currentUser.getGender();
+        if (userGender == null) userGender = "OTHER";
+        String policy = roomInfo.getGenderPolicy();
+        
+        if ("MALE_ONLY".equals(policy) && !"MALE".equalsIgnoreCase(userGender)) {
+            throw new IllegalArgumentException("This room is designated for males only.");
+        }
+        if ("FEMALE_ONLY".equals(policy) && !"FEMALE".equalsIgnoreCase(userGender)) {
+            throw new IllegalArgumentException("This room is designated for females only.");
+        }
+
         if (request.getOccupants() > roomInfo.getCapacity()) {
             throw new IllegalArgumentException(
                     "Number of occupants (" + request.getOccupants() +

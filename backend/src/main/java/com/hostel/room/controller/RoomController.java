@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.hostel.user.dto.UserDTO;
+import com.hostel.user.service.UserService;
+import java.security.Principal;
+
 @RestController
 @RequestMapping("/api/rooms")
 @RequiredArgsConstructor
@@ -18,6 +22,7 @@ import java.util.List;
 public class RoomController {
 
     private final RoomService roomService;
+    private final UserService userService;
 
     @GetMapping("/search")
     @Operation(summary = "Search available rooms with filters (US 01)")
@@ -27,7 +32,8 @@ public class RoomController {
             @RequestParam(required = false) List<String> amenities,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(required = false, defaultValue = "AVAILABLE") String status) {
+            @RequestParam(required = false, defaultValue = "AVAILABLE") String status,
+            Principal principal) {
 
         RoomSearchCriteria criteria = RoomSearchCriteria.builder()
                 .roomType(roomType)
@@ -37,6 +43,17 @@ public class RoomController {
                 .maxPrice(maxPrice)
                 .status(status)
                 .build();
+
+        if (principal != null) {
+            try {
+                UserDTO user = userService.getProfile(principal.getName());
+                if ("STUDENT".equals(user.getRole()) && user.getGender() != null) {
+                    criteria.setGenderPolicy(user.getGender()); // Pass user's gender to criteria
+                }
+            } catch (Exception e) {
+                // Ignore if profile fetch fails or not a user
+            }
+        }
 
         List<RoomDTO> rooms = roomService.searchRooms(criteria);
         return ResponseEntity.ok(rooms);

@@ -18,7 +18,7 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', phone: '', email: ''
+    firstName: '', lastName: '', phone: '', email: '', gender: ''
   });
 
   const { updateUser } = useAuth();
@@ -36,6 +36,7 @@ export default function ProfilePage() {
         lastName: res.data.lastName,
         phone: res.data.phone || '',
         email: res.data.email,
+        gender: res.data.gender || '',
       });
     } catch {
       setError('Failed to load profile.');
@@ -206,6 +207,19 @@ export default function ProfilePage() {
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   />
+                </Form.Group>
+
+                <Form.Group className="mb-4" controlId="profileGender">
+                  <Form.Label><FaUser className="me-2" />Gender</Form.Label>
+                  <Form.Select
+                    value={formData.gender}
+                    onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="OTHER">Other</option>
+                  </Form.Select>
                 </Form.Group>
 
                 <Button variant="primary" type="submit" disabled={saving}>

@@ -42,7 +42,13 @@ public class Room {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private RoomStatus status = RoomStatus.AVAILABLE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender_policy", nullable = false)
+    @Builder.Default
+    private GenderPolicy genderPolicy = GenderPolicy.COED;
 
     @Column(columnDefinition = "TEXT")
     private String description;

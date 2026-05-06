@@ -19,6 +19,7 @@ public class RoomDTO {
     private Integer capacity;
     private BigDecimal pricePerNight;
     private String status;
+    private String genderPolicy;
     private String description;
     private String imagePath;
     private String floorPlanPath;

@@ -33,4 +33,6 @@ public class RegisterRequest {
 
     @Pattern(regexp = "^[0-9]{10}$", message = "Please provide a valid phone number (10 digits)")
     private String phone;
+
+    private String gender;
 }

@@ -1,6 +1,7 @@
 package com.hostel.user.service;
 
 import com.hostel.user.dto.*;
+import com.hostel.user.entity.Gender;
 import com.hostel.user.entity.Role;
 import com.hostel.user.entity.User;
 import com.hostel.user.entity.UserPreference;
@@ -61,6 +62,7 @@ public class UserService {
                 .firstName(request.getFirstName().trim())
                 .lastName(request.getLastName().trim())
                 .phone(request.getPhone())
+                .gender(request.getGender() != null ? Gender.valueOf(request.getGender().toUpperCase()) : Gender.OTHER)
                 .role(Role.STUDENT)
                 .build();
 
@@ -140,6 +142,9 @@ public class UserService {
         }
         if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
+        }
+        if (request.getGender() != null && !request.getGender().isBlank()) {
+            user.setGender(Gender.valueOf(request.getGender().toUpperCase()));
         }
         if (request.getEmail() != null && !request.getEmail().isBlank()) {
             // Check if new email is already taken by another user

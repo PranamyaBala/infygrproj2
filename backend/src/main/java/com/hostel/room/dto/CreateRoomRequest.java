@@ -34,6 +34,7 @@ public class CreateRoomRequest {
     private BigDecimal pricePerNight;
 
     private String description;
+    private String genderPolicy;
     private String imagePath;
     private String floorPlanPath;
     @NotNull(message = "Please select at least 3 amenities")

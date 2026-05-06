@@ -56,6 +56,20 @@ public class RoomService {
                     .collect(Collectors.toList());
         }
 
+        // Filter by Gender Policy for students
+        if (criteria.getGenderPolicy() != null) {
+            String userGender = criteria.getGenderPolicy().toUpperCase();
+            rooms = rooms.stream()
+                    .filter(room -> {
+                        GenderPolicy policy = room.getGenderPolicy();
+                        if (policy == GenderPolicy.COED) return true;
+                        if ("MALE".equals(userGender) && policy == GenderPolicy.MALE_ONLY) return true;
+                        if ("FEMALE".equals(userGender) && policy == GenderPolicy.FEMALE_ONLY) return true;
+                        return false;
+                    })
+                    .collect(Collectors.toList());
+        }
+
         log.info("Room search returned {} results for criteria: {}", rooms.size(), criteria);
 
         return rooms.stream()
@@ -102,6 +116,7 @@ public class RoomService {
                 .capacity(request.getCapacity())
                 .pricePerNight(request.getPricePerNight())
                 .status(RoomStatus.AVAILABLE)
+                .genderPolicy(request.getGenderPolicy() != null ? GenderPolicy.valueOf(request.getGenderPolicy().toUpperCase()) : GenderPolicy.COED)
                 .description(request.getDescription())
                 .imagePath(request.getImagePath())
                 .floorPlanPath(request.getFloorPlanPath())
@@ -130,6 +145,9 @@ public class RoomService {
         room.setFloor(request.getFloor());
         room.setCapacity(request.getCapacity());
         room.setPricePerNight(request.getPricePerNight());
+        if (request.getGenderPolicy() != null) {
+            room.setGenderPolicy(GenderPolicy.valueOf(request.getGenderPolicy().toUpperCase()));
+        }
         room.setDescription(request.getDescription());
         room.setImagePath(request.getImagePath());
         room.setFloorPlanPath(request.getFloorPlanPath());

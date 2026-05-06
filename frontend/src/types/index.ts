@@ -5,6 +5,7 @@ export interface User {
   firstName: string;
   lastName: string;
   phone?: string;
+  gender?: string;
   role: 'STUDENT' | 'ADMIN';
   profilePicturePath?: string;
 }
@@ -16,6 +17,7 @@ export interface AuthResponse {
   firstName: string;
   lastName: string;
   role: string;
+  gender?: string;
 }
 
 export interface LoginRequest {
@@ -29,6 +31,7 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   phone?: string;
+  gender?: string;
 }
 
 export interface UpdateProfileRequest {
@@ -36,6 +39,7 @@ export interface UpdateProfileRequest {
   lastName?: string;
   phone?: string;
   email?: string;
+  gender?: string;
 }
 
 export interface UserPreference {
@@ -68,6 +72,7 @@ export interface Room {
   currentPrice: number;
   basePriceWithAmenities: number;
   availableBeds?: number;
+  genderPolicy?: string;
 }
 
 export interface Amenity {
@@ -86,6 +91,7 @@ export interface RoomSearchCriteria {
   maxPrice?: number;
   status?: string;
   minCapacity?: number;
+  genderPolicy?: string;
 }
 
 export interface CreateRoomRequest {
@@ -98,6 +104,7 @@ export interface CreateRoomRequest {
   imagePath?: string;
   floorPlanPath?: string;
   amenityIds?: number[];
+  genderPolicy?: string;
 }
 
 export interface UpdateRoomStatusRequest {

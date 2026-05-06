@@ -321,7 +321,12 @@ export default function RoomSearchPage() {
                           <h5 className="fw-bold mb-0">Room {room.roomNumber}</h5>
                           <small className="text-muted">{room.roomType} • Floor {room.floor}</small>
                         </div>
-                        {getStatusBadge(room.status)}
+                        <div className="d-flex flex-column align-items-end gap-1">
+                          {getStatusBadge(room.status)}
+                          {room.genderPolicy === 'MALE_ONLY' && <Badge bg="info">Boys Only</Badge>}
+                          {room.genderPolicy === 'FEMALE_ONLY' && <Badge bg="danger" style={{backgroundColor: '#e83e8c'}}>Girls Only</Badge>}
+                          {(!room.genderPolicy || room.genderPolicy === 'COED') && <Badge bg="secondary">Co-Ed</Badge>}
+                        </div>
                       </div>
 
                       <div className="d-flex gap-3 mb-2 text-muted small">

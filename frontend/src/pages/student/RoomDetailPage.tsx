@@ -384,9 +384,12 @@ export default function RoomDetailPage() {
               <div className="d-flex justify-content-between align-items-start mb-3">
                 <div>
                   <h3 className="fw-bold mb-1">Room {room.roomNumber}</h3>
-                  <Badge bg={statusVariant[room.status] || 'secondary'} className="fs-6">
+                  <Badge bg={statusVariant[room.status] || 'secondary'} className="fs-6 me-2">
                     {room.status}
                   </Badge>
+                  {room.genderPolicy === 'MALE_ONLY' && <Badge bg="info" className="fs-6">Boys Only</Badge>}
+                  {room.genderPolicy === 'FEMALE_ONLY' && <Badge bg="danger" style={{backgroundColor: '#e83e8c'}} className="fs-6">Girls Only</Badge>}
+                  {(!room.genderPolicy || room.genderPolicy === 'COED') && <Badge bg="secondary" className="fs-6">Co-Ed</Badge>}
                 </div>
                 <div className="text-end">
                   <h3 className="text-primary fw-bold mb-0">₹{room.currentPrice}</h3>

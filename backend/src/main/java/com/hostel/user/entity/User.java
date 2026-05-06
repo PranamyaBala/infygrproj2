@@ -38,7 +38,13 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private Role role = Role.STUDENT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Gender gender = Gender.OTHER;
 
     @Column(name = "profile_picture_path", length = 500)
     private String profilePicturePath;
