@@ -260,6 +260,129 @@ class BookingServiceTest {
     }
 
     @Test
+    @DisplayName("CreateBooking - Failure: End Date Before Start Date")
+    void createBooking_endDateBeforeStartDate_throwsException() {
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(3));
+        request.setEndDate(LocalDate.now().plusDays(1));
+        request.setOccupants(1);
+
+        when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking("student@hostel.com", request));
+    }
+
+    @Test
+    @DisplayName("CreateBooking - Failure: Room Not Available")
+    void createBooking_roomNotAvailable_throwsException() {
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+        request.setOccupants(1);
+
+        RoomDTO unavailableRoom = RoomDTO.builder().status("MAINTENANCE").build();
+
+        when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
+        when(roomService.getRoomById(1L)).thenReturn(unavailableRoom);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking("student@hostel.com", request));
+    }
+
+    @Test
+    @DisplayName("CreateBooking - Failure: Occupants Exceed Capacity")
+    void createBooking_occupantsExceedCapacity_throwsException() {
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+        request.setOccupants(5); // Capacity is 1
+
+        when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
+        when(roomService.getRoomById(1L)).thenReturn(testRoom);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking("student@hostel.com", request));
+    }
+
+    @Test
+    @DisplayName("CreateBooking - Failure: Dormitory Full")
+    void createBooking_dormitoryFull_throwsException() {
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+        request.setOccupants(2);
+
+        RoomDTO dormRoom = RoomDTO.builder()
+                .id(1L).roomNumber("101").roomType("DORMITORY")
+                .capacity(4).status("AVAILABLE")
+                .basePriceWithAmenities(BigDecimal.valueOf(200))
+                .genderPolicy("COED").build();
+
+        Booking existing = Booking.builder()
+                .startDate(LocalDate.now().plusDays(1))
+                .endDate(LocalDate.now().plusDays(3))
+                .occupants(3).status(BookingStatus.APPROVED).build();
+
+        when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
+        when(roomService.getRoomById(1L)).thenReturn(dormRoom);
+        when(bookingRepository.findOverlappingBookings(any(), any(), any()))
+                .thenReturn(List.of(existing));
+
+        assertThrows(BookingConflictException.class,
+                () -> bookingService.createBooking("student@hostel.com", request));
+    }
+
+    @Test
+    @DisplayName("CreateBooking - Failure: Private Room Booked")
+    void createBooking_privateRoomBooked_throwsException() {
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+        request.setOccupants(1);
+
+        Booking existing = Booking.builder()
+                .startDate(LocalDate.now().plusDays(1))
+                .endDate(LocalDate.now().plusDays(3))
+                .occupants(1).status(BookingStatus.APPROVED).build();
+
+        when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
+        when(roomService.getRoomById(1L)).thenReturn(testRoom);
+        when(bookingRepository.findOverlappingBookings(any(), any(), any()))
+                .thenReturn(List.of(existing));
+
+        assertThrows(BookingConflictException.class,
+                () -> bookingService.createBooking("student@hostel.com", request));
+    }
+
+    @Test
+    @DisplayName("CreateBooking - Failure: Room Event Conflict")
+    void createBooking_roomEventConflict_throwsException() {
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+        request.setOccupants(1);
+
+        com.hostel.room.entity.RoomEvent event = com.hostel.room.entity.RoomEvent.builder()
+                .eventName("Maintenance").build();
+
+        when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
+        when(roomService.getRoomById(1L)).thenReturn(testRoom);
+        when(bookingRepository.findOverlappingBookings(any(), any(), any())).thenReturn(java.util.Collections.emptyList());
+        when(roomEventRepository.findOverlappingEvents(any(), any(), any()))
+                .thenReturn(List.of(event));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking("student@hostel.com", request));
+    }
+
+    @Test
     @DisplayName("GetBookingsByUserEmail - Success")
     void getBookingsByUserEmail_success() {
         when(userService.getProfile("student@hostel.com")).thenReturn(testUser);

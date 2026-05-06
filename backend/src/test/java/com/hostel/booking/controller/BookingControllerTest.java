@@ -139,6 +139,17 @@ class BookingControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("GET /api/bookings/{id}/receipt - Download receipt 200")
+    void downloadReceipt_200() throws Exception {
+        when(bookingService.generateBookingReceipt(eq(1L), eq("student@hostel.com")))
+                .thenReturn("pdfdata".getBytes());
+
+        mockMvc.perform(get("/api/bookings/1/receipt")
+                        .principal(mockAuth("student@hostel.com")))
+                .andExpect(status().isOk());
+    }
+
     private Authentication mockAuth(String email) {
         Authentication auth = mock(Authentication.class);
         when(auth.getName()).thenReturn(email);
