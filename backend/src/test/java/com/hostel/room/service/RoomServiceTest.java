@@ -79,6 +79,38 @@ class RoomServiceTest {
     }
 
     @Test
+    @DisplayName("SearchRooms - Filters by GenderPolicy")
+    void searchRooms_filtersByGenderPolicy() {
+        RoomSearchCriteria criteria = new RoomSearchCriteria();
+        criteria.setGenderPolicy("MALE");
+        
+        Room femaleRoom = Room.builder()
+                .id(2L).roomNumber("102").roomType(RoomType.SINGLE)
+                .capacity(1)
+                .genderPolicy(GenderPolicy.FEMALE_ONLY).build();
+        
+        Room maleRoom = Room.builder()
+                .id(3L).roomNumber("103").roomType(RoomType.SINGLE)
+                .capacity(1)
+                .genderPolicy(GenderPolicy.MALE_ONLY).build();
+
+        when(roomRepository.searchRooms(null, null, null, null, null, null))
+                .thenReturn(List.of(testRoom, femaleRoom, maleRoom));
+        
+        // Only mapping the rooms that pass the filter
+        lenient().when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
+        
+        when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());
+        when(bookingRepository.sumActiveOccupants(anyLong(), any(LocalDate.class))).thenReturn(0);
+
+        List<RoomDTO> result = roomService.searchRooms(criteria);
+
+        // Should return testRoom (COED default) and maleRoom (MALE_ONLY).
+        // Should filter out femaleRoom.
+        assertEquals(2, result.size());
+    }
+
+    @Test
     @DisplayName("GetRoomById - Success")
     void getRoomById_success() {
         when(roomRepository.findByIdWithAmenities(1L)).thenReturn(Optional.of(testRoom));

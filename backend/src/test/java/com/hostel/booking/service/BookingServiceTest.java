@@ -232,6 +232,34 @@ class BookingServiceTest {
     }
 
     @Test
+    @DisplayName("CreateBooking - Failure: Gender Policy Conflict")
+    void createBooking_genderPolicyConflict_throwsException() {
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+        request.setOccupants(1);
+
+        UserDTO maleUser = UserDTO.builder()
+                .id(1L).email("male@hostel.com")
+                .firstName("John").lastName("Doe")
+                .gender("MALE").build();
+
+        RoomDTO femaleRoom = RoomDTO.builder()
+                .id(1L).roomNumber("101").roomType("SINGLE")
+                .capacity(1).status("AVAILABLE")
+                .genderPolicy("FEMALE_ONLY")
+                .build();
+
+        when(userService.getProfile("male@hostel.com")).thenReturn(maleUser);
+        when(roomService.getRoomById(1L)).thenReturn(femaleRoom);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> bookingService.createBooking("male@hostel.com", request),
+                "This room is designated for females only.");
+    }
+
+    @Test
     @DisplayName("GetBookingsByUserEmail - Success")
     void getBookingsByUserEmail_success() {
         when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
