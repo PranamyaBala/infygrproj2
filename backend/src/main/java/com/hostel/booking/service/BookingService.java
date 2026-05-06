@@ -592,4 +592,11 @@ public class BookingService {
         RoomDTO room = roomService.getRoomById(booking.getRoomId());
         return receiptService.generateReceipt(booking, room, student);
     }
+    @Transactional(readOnly = true)
+    public int calculateRemainingCapacity(Long roomId, LocalDate start, LocalDate end) {
+        RoomDTO room = roomService.getRoomById(roomId);
+        List<Booking> overlapping = bookingRepository.findOverlappingBookings(roomId, start, end);
+        int maxOccupancy = calculateMaxConcurrentOccupancy(overlapping, start, end);
+        return Math.max(0, room.getCapacity() - maxOccupancy);
+    }
 }

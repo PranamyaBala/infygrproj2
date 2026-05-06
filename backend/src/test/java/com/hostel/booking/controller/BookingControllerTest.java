@@ -126,27 +126,41 @@ class BookingControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /api/bookings/{id}/late-checkout - Request late checkout 200")
-    void requestLateCheckout_200() throws Exception {
-        LateCheckoutRequest request = new LateCheckoutRequest();
+    @DisplayName("GET /api/bookings/room/{id}/available-beds - Returns count 200")
+    void getAvailableBeds_200() throws Exception {
+        when(bookingService.calculateRemainingCapacity(eq(1L), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(4);
 
-        when(bookingService.handleLateCheckout(eq(1L), any(LateCheckoutRequest.class)))
-                .thenReturn(testBookingDTO);
-
-        mockMvc.perform(put("/api/bookings/1/late-checkout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/bookings/room/1/available-beds")
+                        .param("startDate", LocalDate.now().plusDays(1).toString())
+                        .param("endDate", LocalDate.now().plusDays(3).toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(4));
     }
 
     @Test
     @DisplayName("GET /api/bookings/{id}/receipt - Download receipt 200")
     void downloadReceipt_200() throws Exception {
-        when(bookingService.generateBookingReceipt(eq(1L), eq("student@hostel.com")))
-                .thenReturn("pdfdata".getBytes());
+        byte[] pdf = "test-pdf".getBytes();
+        when(bookingService.generateBookingReceipt(eq(1L), anyString())).thenReturn(pdf);
 
         mockMvc.perform(get("/api/bookings/1/receipt")
                         .principal(mockAuth("student@hostel.com")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(content().bytes(pdf));
+    }
+
+    @Test
+    @DisplayName("PUT /api/bookings/{id}/late-checkout - Request late checkout 200")
+    void requestLateCheckout_200() throws Exception {
+        LateCheckoutRequest request = new LateCheckoutRequest();
+        request.setLateCheckoutFee(BigDecimal.valueOf(50));
+        when(bookingService.handleLateCheckout(eq(1L), any())).thenReturn(testBookingDTO);
+
+        mockMvc.perform(put("/api/bookings/1/late-checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
     }
 

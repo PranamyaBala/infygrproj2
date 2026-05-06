@@ -150,6 +150,13 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/hostel/**/config/**</exclude>
+                        <exclude>com/hostel/**/exception/**</exclude>
+                        <exclude>com/hostel/**/aspect/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

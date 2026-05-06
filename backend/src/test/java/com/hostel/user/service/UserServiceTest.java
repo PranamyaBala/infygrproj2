@@ -289,4 +289,17 @@ class UserServiceTest {
         assertEquals(1L, result.getId());
         verify(preferenceRepository).save(any(UserPreference.class));
     }
+    @Test
+    @DisplayName("DeleteProfilePicture - Success")
+    void deleteProfilePicture_success() throws java.io.IOException {
+        testUser.setProfilePicturePath("uploads/profiles/test.jpg");
+        when(userRepository.findByEmail("student@hostel.com")).thenReturn(Optional.of(testUser));
+        when(modelMapper.map(any(User.class), eq(UserDTO.class))).thenReturn(testUserDTO);
+
+        UserDTO result = userService.deleteProfilePicture("student@hostel.com");
+
+        assertNotNull(result);
+        assertNull(testUser.getProfilePicturePath());
+        verify(userRepository).save(any(User.class));
+    }
 }

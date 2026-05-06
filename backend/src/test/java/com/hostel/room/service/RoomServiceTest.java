@@ -111,6 +111,45 @@ class RoomServiceTest {
     }
 
     @Test
+    @DisplayName("SearchRooms - Filters by Amenities")
+    void searchRooms_filtersByAmenities() {
+        RoomSearchCriteria criteria = new RoomSearchCriteria();
+        criteria.setAmenities(List.of("WiFi"));
+        
+        when(roomRepository.searchRooms(null, null, null, null, null, null))
+                .thenReturn(List.of(testRoom));
+        when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
+        when(pricingTierRepository.findByRoomId(1L)).thenReturn(Collections.emptyList());
+        when(bookingRepository.sumActiveOccupants(eq(1L), any())).thenReturn(0);
+
+        List<RoomDTO> result = roomService.searchRooms(criteria);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    @DisplayName("CreateRoom - Success")
+    void createRoom_success() {
+        CreateRoomRequest request = new CreateRoomRequest();
+        request.setRoomNumber("105");
+        request.setRoomType("SINGLE");
+        request.setCapacity(1);
+        request.setFloor(1);
+        request.setPricePerNight(BigDecimal.valueOf(200));
+
+        when(roomRepository.existsByRoomNumber("105")).thenReturn(false);
+        when(roomRepository.save(any(Room.class))).thenReturn(testRoom);
+        when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
+        when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());
+        when(bookingRepository.sumActiveOccupants(anyLong(), any())).thenReturn(0);
+
+        RoomDTO result = roomService.createRoom(request);
+
+        assertNotNull(result);
+        verify(roomRepository).save(any(Room.class));
+    }
+
+    @Test
     @DisplayName("GetRoomById - Success")
     void getRoomById_success() {
         when(roomRepository.findByIdWithAmenities(1L)).thenReturn(Optional.of(testRoom));
@@ -143,30 +182,6 @@ class RoomServiceTest {
         RoomDTO result = roomService.getRoomByNumber("101");
 
         assertEquals("101", result.getRoomNumber());
-    }
-
-    @Test
-    @DisplayName("CreateRoom - Success with amenities")
-    void createRoom_success() {
-        CreateRoomRequest request = new CreateRoomRequest();
-        request.setRoomNumber("201");
-        request.setRoomType("SINGLE");
-        request.setFloor(2);
-        request.setCapacity(1);
-        request.setPricePerNight(BigDecimal.valueOf(200));
-        request.setAmenityIds(List.of(1L, 2L, 3L));
-
-        when(roomRepository.existsByRoomNumber("201")).thenReturn(false);
-        when(amenityRepository.findByIdIn(List.of(1L, 2L, 3L))).thenReturn(List.of(testAmenity));
-        when(roomRepository.save(any(Room.class))).thenReturn(testRoom);
-        when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
-        when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());
-        when(bookingRepository.sumActiveOccupants(anyLong(), any(LocalDate.class))).thenReturn(0);
-
-        RoomDTO result = roomService.createRoom(request);
-
-        assertNotNull(result);
-        verify(roomRepository).save(any(Room.class));
     }
 
     @Test

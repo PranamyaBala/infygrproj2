@@ -383,6 +383,68 @@ class BookingServiceTest {
     }
 
     @Test
+    @DisplayName("CreateBooking - Success: Dormitory Room")
+    void createBooking_dormitory_success() {
+        testRoom.setRoomType("DORMITORY");
+        testRoom.setCapacity(4);
+        testRoom.setBasePriceWithAmenities(BigDecimal.valueOf(100));
+
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(5));
+        request.setOccupants(1);
+
+        when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
+        when(roomService.getRoomById(1L)).thenReturn(testRoom);
+        when(bookingRepository.findOverlappingBookings(eq(1L), any(), any()))
+                .thenReturn(List.of());
+        when(roomEventRepository.findOverlappingEvents(eq(1L), any(), any()))
+                .thenReturn(List.of());
+        when(pricingTierRepository.findActiveByRoomIdAndDate(eq(1L), any()))
+                .thenReturn(List.of());
+        when(bookingRepository.save(any(Booking.class))).thenReturn(testBooking);
+        when(modelMapper.map(any(Booking.class), eq(BookingDTO.class))).thenReturn(testBookingDTO);
+        when(userService.getUserById(anyLong())).thenReturn(testUser);
+
+        BookingDTO result = bookingService.createBooking("student@hostel.com", request);
+
+        assertNotNull(result);
+        verify(bookingRepository).save(any(Booking.class));
+    }
+
+    @Test
+    @DisplayName("CreateBooking - Success: Private Room")
+    void createBooking_privateRoom_success() {
+        testRoom.setRoomType("PRIVATE_ROOM");
+        testRoom.setCapacity(2);
+        testRoom.setBasePriceWithAmenities(BigDecimal.valueOf(300));
+
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+        request.setOccupants(2);
+
+        when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
+        when(roomService.getRoomById(1L)).thenReturn(testRoom);
+        when(bookingRepository.findOverlappingBookings(eq(1L), any(), any()))
+                .thenReturn(List.of());
+        when(roomEventRepository.findOverlappingEvents(eq(1L), any(), any()))
+                .thenReturn(List.of());
+        when(pricingTierRepository.findActiveByRoomIdAndDate(eq(1L), any()))
+                .thenReturn(List.of());
+        when(bookingRepository.save(any(Booking.class))).thenReturn(testBooking);
+        when(modelMapper.map(any(Booking.class), eq(BookingDTO.class))).thenReturn(testBookingDTO);
+        when(userService.getUserById(anyLong())).thenReturn(testUser);
+
+        BookingDTO result = bookingService.createBooking("student@hostel.com", request);
+
+        assertNotNull(result);
+        verify(bookingRepository).save(any(Booking.class));
+    }
+
+    @Test
     @DisplayName("GetBookingsByUserEmail - Success")
     void getBookingsByUserEmail_success() {
         when(userService.getProfile("student@hostel.com")).thenReturn(testUser);
@@ -429,6 +491,68 @@ class BookingServiceTest {
         when(bookingRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(BookingNotFoundException.class, () -> bookingService.getBookingById(99L));
+    }
+
+    @Test
+    @DisplayName("UpdateBookingStatus - Check-in: APPROVED to CHECKED_IN")
+    void updateBookingStatus_checkin_success() {
+        UpdateBookingStatusRequest request = new UpdateBookingStatusRequest();
+        request.setStatus("CHECKED_IN");
+        testBooking.setStatus(BookingStatus.APPROVED);
+
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(testBooking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(testBooking);
+        when(roomService.getRoomById(1L)).thenReturn(testRoom);
+        when(userService.getUserById(1L)).thenReturn(testUser);
+        when(modelMapper.map(any(Booking.class), eq(BookingDTO.class))).thenReturn(testBookingDTO);
+
+        BookingDTO result = bookingService.updateBookingStatus(1L, request);
+
+        assertNotNull(result);
+        verify(roomService).updateRoomStatus(eq(1L), any());
+    }
+
+    @Test
+    @DisplayName("UpdateBookingStatus - Check-out: CHECKED_IN to CHECKED_OUT")
+    void updateBookingStatus_checkout_success() {
+        UpdateBookingStatusRequest request = new UpdateBookingStatusRequest();
+        request.setStatus("CHECKED_OUT");
+        testBooking.setStatus(BookingStatus.CHECKED_IN);
+
+        when(bookingRepository.findById(1L)).thenReturn(Optional.of(testBooking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(testBooking);
+        when(roomService.getRoomById(1L)).thenReturn(testRoom);
+        when(userService.getUserById(1L)).thenReturn(testUser);
+        when(modelMapper.map(any(Booking.class), eq(BookingDTO.class))).thenReturn(testBookingDTO);
+
+        BookingDTO result = bookingService.updateBookingStatus(1L, request);
+
+        assertNotNull(result);
+        verify(roomService).updateRoomStatus(eq(1L), any());
+    }
+
+    @Test
+    @DisplayName("CreateBooking - Conflict: Private Room already booked")
+    void createBooking_privateRoomConflict_throwsException() {
+        // Reset room to private
+        RoomDTO room = RoomDTO.builder()
+                .id(1L).roomNumber("101").roomType("PRIVATE_ROOM")
+                .capacity(1).status("AVAILABLE").genderPolicy("ANY")
+                .build();
+        
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRoomId(1L);
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+        request.setOccupants(1);
+
+        when(userService.getProfile(anyString())).thenReturn(testUser);
+        when(roomService.getRoomById(1L)).thenReturn(room);
+        when(bookingRepository.findOverlappingBookings(eq(1L), any(), any()))
+                .thenReturn(List.of(testBooking));
+
+        assertThrows(BookingConflictException.class,
+                () -> bookingService.createBooking("student@hostel.com", request));
     }
 
     @Test
