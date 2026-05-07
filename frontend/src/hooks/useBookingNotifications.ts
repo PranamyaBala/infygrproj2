@@ -30,49 +30,62 @@ export function useBookingNotifications() {
   };
 
   const checkForUpdates = useCallback(async () => {
-    if (!isAuthenticated || isAdmin) {
+    if (!isAuthenticated) {
       setUnseenCount(0);
       return;
     }
 
     try {
-      const res = await bookingApi.getMyBookings();
-      const bookings = res.data;
-      const seenState = getSeenState();
+      if (isAdmin) {
+        // Admin logic: Count all PENDING bookings
+        const res = await bookingApi.getBookingsByStatus('PENDING');
+        setUnseenCount(res.data.length);
+      } else {
+        // Student logic: Track status changes (APPROVED/REJECTED)
+        const res = await bookingApi.getMyBookings();
+        const bookings = res.data;
+        const seenState = getSeenState();
 
-      let count = 0;
-      for (const booking of bookings) {
-        // Only notify for APPROVED or REJECTED status changes
-        if (['APPROVED', 'REJECTED'].includes(booking.status)) {
-          const lastSeenStatus = seenState[String(booking.id)];
-          if (lastSeenStatus !== booking.status) {
-            count++;
+        let count = 0;
+        for (const booking of bookings) {
+          if (['APPROVED', 'REJECTED'].includes(booking.status)) {
+            const lastSeenStatus = seenState[String(booking.id)];
+            if (lastSeenStatus !== booking.status) {
+              count++;
+            }
           }
         }
+        setUnseenCount(count);
       }
-
-      setUnseenCount(count);
     } catch {
-      // Silently fail — don't break the UI for notification polling errors
+      // Silently fail
     }
   }, [isAuthenticated, isAdmin]);
 
   const markAllAsSeen = useCallback(async () => {
+    if (!isAuthenticated) return;
+
     try {
-      const res = await bookingApi.getMyBookings();
-      const bookings = res.data;
-      const seenState = getSeenState();
+      if (isAdmin) {
+        // For admin, "marking as seen" just refreshes the count
+        // Real marking as seen happens when they process the bookings
+        checkForUpdates();
+      } else {
+        const res = await bookingApi.getMyBookings();
+        const bookings = res.data;
+        const seenState = getSeenState();
 
-      for (const booking of bookings) {
-        seenState[String(booking.id)] = booking.status;
+        for (const booking of bookings) {
+          seenState[String(booking.id)] = booking.status;
+        }
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seenState));
+        setUnseenCount(0);
       }
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(seenState));
-      setUnseenCount(0);
     } catch {
       // Silently fail
     }
-  }, []);
+  }, [isAuthenticated, isAdmin, checkForUpdates]);
 
   useEffect(() => {
     // Initial check

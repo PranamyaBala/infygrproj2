@@ -83,9 +83,19 @@ export default function Navbar() {
                 <Nav.Link
                   as={Link}
                   to="/admin/bookings"
-                  className={isActive('/admin/bookings') ? 'active' : ''}
+                  className={`position-relative ${isActive('/admin/bookings') ? 'active' : ''}`}
                 >
                   <FaCalendarAlt className="me-1" /> Bookings
+                  {unseenCount > 0 && (
+                    <Badge
+                      bg="danger"
+                      pill
+                      className="position-absolute translate-middle"
+                      style={{ top: '8px', right: '-6px', fontSize: '0.65rem' }}
+                    >
+                      {unseenCount}
+                    </Badge>
+                  )}
                 </Nav.Link>
                 <Nav.Link
                   as={Link}
