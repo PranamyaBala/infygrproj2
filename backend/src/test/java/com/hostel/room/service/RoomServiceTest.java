@@ -351,15 +351,181 @@ class RoomServiceTest {
     }
 
     @Test
-    @DisplayName("GetRoomsByStatus - AVAILABLE")
-    void getRoomsByStatus_success() {
-        when(roomRepository.findByStatus(RoomStatus.AVAILABLE)).thenReturn(List.of(testRoom));
+    @DisplayName("GetAllAmenities - Success")
+    void getAllAmenities_success() {
+        when(amenityRepository.findAll()).thenReturn(List.of(testAmenity));
+        when(modelMapper.map(any(Amenity.class), eq(AmenityDTO.class)))
+                .thenReturn(new AmenityDTO());
+
+        List<AmenityDTO> result = roomService.getAllAmenities();
+
+        assertEquals(1, result.size());
+        verify(amenityRepository).findAll();
+    }
+
+    @Test
+    @DisplayName("GetPricingTiers - Success")
+    void getPricingTiers_success() {
+        PricingTier tier = PricingTier.builder().id(1L).room(testRoom)
+                .seasonName("Summer").startDate(LocalDate.now())
+                .endDate(LocalDate.now().plusMonths(2))
+                .priceMultiplier(BigDecimal.valueOf(1.5)).build();
+
+        when(pricingTierRepository.findByRoomId(1L)).thenReturn(List.of(tier));
+        when(modelMapper.map(any(PricingTier.class), eq(PricingTierDTO.class)))
+                .thenReturn(new PricingTierDTO());
+
+        List<PricingTierDTO> result = roomService.getPricingTiers(1L);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    @DisplayName("GetRoomEvents - Success")
+    void getRoomEvents_success() {
+        RoomEvent event = RoomEvent.builder().id(1L).eventName("Tech Fest")
+                .startDate(LocalDate.now()).endDate(LocalDate.now().plusDays(3)).build();
+
+        when(roomEventRepository.findByRoomId(1L)).thenReturn(List.of(event));
+        when(modelMapper.map(any(RoomEvent.class), eq(RoomEventDTO.class)))
+                .thenReturn(new RoomEventDTO());
+
+        List<RoomEventDTO> result = roomService.getRoomEvents(1L);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    @DisplayName("UpdateRoomStatus - to OCCUPIED sets dates")
+    void updateRoomStatus_toOccupied() {
+        UpdateRoomStatusRequest request = UpdateRoomStatusRequest.builder()
+                .status("OCCUPIED")
+                .occupiedStartDate(LocalDate.now())
+                .occupiedEndDate(LocalDate.now().plusDays(5))
+                .build();
+
+        when(roomRepository.findById(1L)).thenReturn(Optional.of(testRoom));
+        when(roomRepository.save(any(Room.class))).thenReturn(testRoom);
         when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
         when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());
         when(bookingRepository.sumActiveOccupants(anyLong(), any(LocalDate.class))).thenReturn(0);
 
-        List<RoomDTO> result = roomService.getRoomsByStatus("AVAILABLE");
+        roomService.updateRoomStatus(1L, request);
+
+        verify(roomRepository).save(argThat(r -> r.getStatus() == RoomStatus.OCCUPIED));
+    }
+
+    @Test
+    @DisplayName("UpdateRoomStatus - Room not found throws exception")
+    void updateRoomStatus_notFound_throwsException() {
+        UpdateRoomStatusRequest request = UpdateRoomStatusRequest.builder()
+                .status("AVAILABLE").build();
+
+        when(roomRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class,
+                () -> roomService.updateRoomStatus(99L, request));
+    }
+
+    @Test
+    @DisplayName("SearchRooms - AVAILABLE filter hides dynamically OCCUPIED rooms")
+    void searchRooms_availableFilter_hidesOccupied() {
+        RoomSearchCriteria criteria = new RoomSearchCriteria();
+        criteria.setStatus("AVAILABLE");
+
+        // DTO reports as OCCUPIED (dynamic state)
+        RoomDTO occupiedDTO = RoomDTO.builder()
+                .id(1L).roomNumber("101").status("OCCUPIED").build();
+
+        when(roomRepository.searchRooms(null, null, RoomStatus.AVAILABLE, null, null, null))
+                .thenReturn(List.of(testRoom));
+        when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(occupiedDTO);
+        when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());
+        when(bookingRepository.sumActiveOccupants(anyLong(), any(LocalDate.class))).thenReturn(0);
+
+        List<RoomDTO> result = roomService.searchRooms(criteria);
+
+        // Dynamically OCCUPIED room should be filtered OUT
+        assertEquals(0, result.size());
+    }
+
+    @Test
+    @DisplayName("CreateRoom - With amenity IDs and gender policy")
+    void createRoom_withAmenitiesAndGenderPolicy() {
+        CreateRoomRequest request = new CreateRoomRequest();
+        request.setRoomNumber("102");
+        request.setRoomType("DORMITORY");
+        request.setCapacity(6);
+        request.setFloor(1);
+        request.setPricePerNight(BigDecimal.valueOf(150));
+        request.setGenderPolicy("FEMALE_ONLY");
+        request.setAmenityIds(List.of(1L));
+
+        when(roomRepository.existsByRoomNumber("102")).thenReturn(false);
+        when(amenityRepository.findByIdIn(List.of(1L))).thenReturn(List.of(testAmenity));
+        when(roomRepository.save(any(Room.class))).thenReturn(testRoom);
+        when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
+        when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());
+        when(bookingRepository.sumActiveOccupants(anyLong(), any(LocalDate.class))).thenReturn(0);
+
+        RoomDTO result = roomService.createRoom(request);
+
+        assertNotNull(result);
+        verify(amenityRepository).findByIdIn(List.of(1L));
+    }
+
+    @Test
+    @DisplayName("UpdateRoom - Not found throws RoomNotFoundException")
+    void updateRoom_notFound_throwsException() {
+        CreateRoomRequest request = new CreateRoomRequest();
+        request.setRoomNumber("101");
+        request.setRoomType("SINGLE");
+
+        when(roomRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(RoomNotFoundException.class,
+                () -> roomService.updateRoom(99L, request));
+    }
+
+    @Test
+    @DisplayName("SearchRooms - With RoomType and Floor filter")
+    void searchRooms_withRoomTypeAndFloor() {
+        RoomSearchCriteria criteria = new RoomSearchCriteria();
+        criteria.setRoomType("SINGLE");
+        criteria.setFloor(1);
+
+        when(roomRepository.searchRooms(eq(RoomType.SINGLE), eq(1), isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(List.of(testRoom));
+        when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
+        when(pricingTierRepository.findByRoomId(anyLong())).thenReturn(Collections.emptyList());
+        when(bookingRepository.sumActiveOccupants(anyLong(), any(LocalDate.class))).thenReturn(0);
+
+        List<RoomDTO> result = roomService.searchRooms(criteria);
 
         assertEquals(1, result.size());
+    }
+
+    @Test
+    @DisplayName("mapToDTO - With active pricing tier sets currentPrice")
+    void mapToDTO_withActivePricingTier_setsCurrentPrice() {
+        PricingTier activeTier = PricingTier.builder()
+                .id(1L).room(testRoom)
+                .seasonName("Peak")
+                .startDate(LocalDate.now().minusDays(1))
+                .endDate(LocalDate.now().plusDays(10))
+                .priceMultiplier(BigDecimal.valueOf(2.0))
+                .build();
+
+        when(roomRepository.findByIdWithAmenities(1L)).thenReturn(Optional.of(testRoom));
+        when(modelMapper.map(any(Room.class), eq(RoomDTO.class))).thenReturn(testRoomDTO);
+        when(pricingTierRepository.findByRoomId(1L)).thenReturn(List.of(activeTier));
+        lenient().when(modelMapper.map(any(PricingTier.class), eq(PricingTierDTO.class)))
+                .thenReturn(new PricingTierDTO());
+        when(bookingRepository.sumActiveOccupants(eq(1L), any(LocalDate.class))).thenReturn(0);
+
+        RoomDTO result = roomService.getRoomById(1L);
+
+        assertNotNull(result);
+        verify(pricingTierRepository).findByRoomId(1L);
     }
 }
