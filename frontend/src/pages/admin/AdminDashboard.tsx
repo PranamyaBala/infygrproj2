@@ -6,7 +6,8 @@ import {
 } from 'react-bootstrap';
 import {
   FaTachometerAlt, FaBed, FaUsers, FaCheckCircle,
-  FaWrench, FaPlus, FaDoorOpen
+  FaWrench, FaPlus, FaDoorOpen, FaMars, FaVenus, FaVenusMars,
+  FaEdit, FaSyncAlt, FaTag, FaCalendarAlt
 } from 'react-icons/fa';
 import { roomApi } from '../../api/roomApi';
 import type { Room, Amenity, CreateRoomRequest, UpdateRoomStatusRequest } from '../../types';
@@ -42,6 +43,7 @@ export default function AdminDashboard() {
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [genderFilter, setGenderFilter] = useState('');
 
   // Add Room Modal
   const [showAddRoom, setShowAddRoom] = useState(false);
@@ -260,9 +262,59 @@ export default function AdminDashboard() {
     setShowStatusModal(true);
   };
 
-  const filteredRooms = statusFilter
-    ? rooms.filter(r => r.status === statusFilter)
-    : rooms;
+  const filteredRooms = rooms.filter(r => {
+    const matchesStatus = !statusFilter || r.status === statusFilter;
+    const matchesGender = !genderFilter || r.genderPolicy === genderFilter;
+    return matchesStatus && matchesGender;
+  });
+
+  const getGenderBadge = (policy: string) => {
+    const badgeStyle = { 
+      width: '90px', 
+      justifyContent: 'center',
+      padding: '6px 10px',
+      fontSize: '0.75rem',
+      fontWeight: '600'
+    };
+
+    switch (policy) {
+      case 'MALE_ONLY':
+        return (
+          <Badge 
+            bg="info" 
+            pill
+            className="d-inline-flex align-items-center gap-1 shadow-sm" 
+            style={{ ...badgeStyle, backgroundColor: '#0ea5e9' }}
+          >
+            <FaMars /> BOYS
+          </Badge>
+        );
+      case 'FEMALE_ONLY':
+        return (
+          <Badge 
+            bg="danger" 
+            pill
+            className="d-inline-flex align-items-center gap-1 shadow-sm" 
+            style={{ ...badgeStyle, backgroundColor: '#ec4899', borderColor: '#ec4899' }}
+          >
+            <FaVenus /> GIRLS
+          </Badge>
+        );
+      case 'COED':
+        return (
+          <Badge 
+            bg="dark" 
+            pill
+            className="d-inline-flex align-items-center gap-1 shadow-sm" 
+            style={{ ...badgeStyle, backgroundColor: '#6062dd1b' }}
+          >
+            <FaVenusMars /> CO-ED
+          </Badge>
+        );
+      default:
+        return <Badge bg="light" text="dark" style={badgeStyle}>{policy}</Badge>;
+    }
+  };
 
   const stats = {
     total: rooms.length,
@@ -317,16 +369,28 @@ export default function AdminDashboard() {
       <Card className="border-0 shadow-sm">
         <Card.Header className="bg-white d-flex justify-content-between align-items-center">
           <h5 className="mb-0 fw-bold"><FaDoorOpen className="me-2" />Room Management</h5>
-          <Form.Select
-            style={{ width: '200px' }}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            <option value="AVAILABLE">Available</option>
-            <option value="OCCUPIED">Occupied</option>
-            <option value="MAINTENANCE">Maintenance</option>
-          </Form.Select>
+          <div className="d-flex gap-2">
+            <Form.Select
+              style={{ width: '160px' }}
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+            >
+              <option value="">All Policies</option>
+              <option value="COED">Co-Ed</option>
+              <option value="MALE_ONLY">Boys Only</option>
+              <option value="FEMALE_ONLY">Girls Only</option>
+            </Form.Select>
+            <Form.Select
+              style={{ width: '160px' }}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="AVAILABLE">Available</option>
+              <option value="OCCUPIED">Occupied</option>
+              <option value="MAINTENANCE">Maintenance</option>
+            </Form.Select>
+          </div>
         </Card.Header>
         <Card.Body className="p-0">
           <Table responsive hover className="mb-0">
@@ -338,6 +402,7 @@ export default function AdminDashboard() {
                 <th>Capacity</th>
                 <th>Available Beds</th>
                 <th>Price/Night</th>
+                <th>Policy</th>
                 <th>Status</th>
                 <th>Amenities</th>
                 <th>Action</th>
@@ -376,6 +441,7 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   </td>
+                  <td>{getGenderBadge(room.genderPolicy || 'COED')}</td>
                   <td>{getStatusBadge(room.status)}</td>
                   <td>
                     {room.amenities?.slice(0, 2).map(a => (
@@ -400,24 +466,35 @@ export default function AdminDashboard() {
                   </td>
                   <td>
                     <div className="d-flex gap-2">
-                      <Button variant="outline-warning" size="sm" onClick={() => openEditModal(room)}>
-                        Edit
-                      </Button>
-                      <Button variant="outline-primary" size="sm" onClick={() => openStatusModal(room)}>
-                        Status
-                      </Button>
-                      <Button 
-                        variant="outline-info" size="sm" 
-                        onClick={() => navigate(`/admin/rooms/${room.id}/pricing`)}
-                      >
-                        Pricing
-                      </Button>
-                      <Button 
-                        variant="outline-secondary" size="sm" 
-                        onClick={() => navigate(`/admin/rooms/${room.id}/events`)}
-                      >
-                        Events
-                      </Button>
+                      <OverlayTrigger placement="top" overlay={<Tooltip>Edit Room</Tooltip>}>
+                        <Button variant="outline-warning" size="sm" onClick={() => openEditModal(room)}>
+                          <FaEdit />
+                        </Button>
+                      </OverlayTrigger>
+
+                      <OverlayTrigger placement="top" overlay={<Tooltip>Update Status</Tooltip>}>
+                        <Button variant="outline-primary" size="sm" onClick={() => openStatusModal(room)}>
+                          <FaSyncAlt />
+                        </Button>
+                      </OverlayTrigger>
+
+                      <OverlayTrigger placement="top" overlay={<Tooltip>Pricing Tiers</Tooltip>}>
+                        <Button 
+                          variant="outline-info" size="sm" 
+                          onClick={() => navigate(`/admin/rooms/${room.id}/pricing`)}
+                        >
+                          <FaTag />
+                        </Button>
+                      </OverlayTrigger>
+
+                      <OverlayTrigger placement="top" overlay={<Tooltip>Room Events</Tooltip>}>
+                        <Button 
+                          variant="outline-secondary" size="sm" 
+                          onClick={() => navigate(`/admin/rooms/${room.id}/events`)}
+                        >
+                          <FaCalendarAlt />
+                        </Button>
+                      </OverlayTrigger>
                     </div>
                   </td>
                 </tr>

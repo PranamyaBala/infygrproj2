@@ -213,6 +213,7 @@ export default function ProfilePage() {
                   <Form.Label><FaUser className="me-2" />Gender</Form.Label>
                   <Form.Select
                     value={formData.gender}
+                    disabled={profile?.role === 'STUDENT'}
                     onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
                   >
                     <option value="">Select Gender</option>
@@ -220,6 +221,11 @@ export default function ProfilePage() {
                     <option value="FEMALE">Female</option>
                     <option value="OTHER">Other</option>
                   </Form.Select>
+                  {profile?.role === 'STUDENT' && (
+                    <Form.Text className="text-muted">
+                      Gender cannot be changed as it is used for room allocation.
+                    </Form.Text>
+                  )}
                 </Form.Group>
 
                 <Button variant="primary" type="submit" disabled={saving}>

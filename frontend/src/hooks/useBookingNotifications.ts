@@ -79,7 +79,7 @@ export function useBookingNotifications() {
     checkForUpdates();
 
     // Poll every 30 seconds
-    const interval = setInterval(checkForUpdates, 30000);
+    const interval = setInterval(checkForUpdates, 15000);
     return () => clearInterval(interval);
   }, [checkForUpdates]);
 

@@ -108,7 +108,7 @@ export default function RegisterPage() {
                       <Form.Label><FaPhone className="me-2" />Phone Number</Form.Label>
                       <Form.Control
                         type="tel"
-                        placeholder="Phone number (optional)"
+                        placeholder="Phone number"
                         value={formData.phone}
                         onChange={(e) => handleChange('phone', e.target.value)}
                       />
