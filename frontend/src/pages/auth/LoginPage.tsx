@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { FaHotel, FaEnvelope, FaLock, FaArrowRight } from 'react-icons/fa';
 import { authApi } from '../../api/authApi';
 import { useAuth } from '../../context/AuthContext';
-import Footer from '../../components/common/Footer';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -44,7 +43,7 @@ export default function LoginPage() {
           <Row className="g-0 min-vh-100">
             {/* Left Side: Image & Branding (Hidden on mobile) */}
             <Col lg={7} xl={8} className="d-none d-lg-block position-relative overflow-hidden">
-              <div 
+              <div
                 className="position-absolute inset-0 w-100 h-100"
                 style={{
                   backgroundImage: 'url("/images/auth/login-bg.png")',
@@ -53,7 +52,7 @@ export default function LoginPage() {
                   filter: 'brightness(0.7)'
                 }}
               />
-              <div 
+              <div
                 className="position-absolute inset-0 w-100 h-100"
                 style={{
                   background: 'linear-gradient(45deg, rgba(15, 12, 41, 0.8) 0%, rgba(48, 43, 99, 0.4) 100%)'
@@ -68,7 +67,7 @@ export default function LoginPage() {
                     Manage your stay, connect with peers, and access premium amenities all in one place.
                   </p>
                 </div>
-                
+
                 <div className="d-flex gap-5 mt-5 pt-4">
                   <div>
                     <h3 className="fw-bold mb-1">1000+</h3>
@@ -90,7 +89,7 @@ export default function LoginPage() {
                     <h3 className="fw-bold mb-1">Services</h3>
                     <p className="text-light opacity-75">AC,Wifi,Laundry,Food,Lounge</p>
                   </div>
-                  
+
                 </div>
               </div>
             </Col>
@@ -157,10 +156,10 @@ export default function LoginPage() {
                     </div>
                   </Form.Group>
 
-                  <div className="mb-4 form-check">
+                  {/* <div className="mb-4 form-check">
                     <input type="checkbox" className="form-check-input" id="rememberMe" />
                     <label className="form-check-label small text-muted" htmlFor="rememberMe">Remember me for 30 days</label>
-                  </div>
+                  </div> */}
 
                   <Button
                     variant="primary"
