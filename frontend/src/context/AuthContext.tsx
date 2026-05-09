@@ -12,7 +12,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (authResponse: AuthResponse) => void;
+  login: (authResponse: AuthResponse, rememberMe?: boolean) => void;
   updateUser: (userData: Partial<AuthResponse>) => void;
   logout: () => void;
 }
@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('loginTimestamp');
+    localStorage.removeItem('rememberMe');
     warningShown.current = false;
 
     if (reason) {
@@ -65,9 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) return;
 
+    const isRemembered = localStorage.getItem('rememberMe') === 'true';
+    // If remembered, extend inactivity timeout to 30 days, otherwise keep at 30 mins
+    const timeout = isRemembered ? 30 * 24 * 60 * 60 * 1000 : INACTIVITY_TIMEOUT_MS;
+
     inactivityTimer.current = setTimeout(() => {
       logout('Session expired due to inactivity. Please log in again.');
-    }, INACTIVITY_TIMEOUT_MS);
+    }, timeout);
   }, [logout]);
 
   // ==================== TOKEN EXPIRY CHECK ====================
@@ -150,13 +155,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ==================== LOGIN ====================
-  const login = (authResponse: AuthResponse) => {
+  const login = (authResponse: AuthResponse, rememberMe: boolean = false) => {
     setUser(authResponse);
     setToken(authResponse.token);
     localStorage.setItem('token', authResponse.token);
     localStorage.setItem('user', JSON.stringify(authResponse));
     localStorage.setItem('loginTimestamp', Date.now().toString());
+    localStorage.setItem('rememberMe', String(rememberMe));
     warningShown.current = false;
+    resetInactivityTimer();
   };
 
   // ==================== UPDATE USER ====================

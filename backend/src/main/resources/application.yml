@@ -39,7 +39,7 @@ spring:
 app:
   jwt:
     secret: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
-    expiration-ms: 86400000 # 24 hours
+    expiration-ms: 2592000000 # 30 days (30 * 24 * 60 * 60 * 1000)
   notifications:
     enabled: false # Set true to send real emails
 

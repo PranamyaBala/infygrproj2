@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -23,7 +24,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const response = await authApi.login({ email, password });
-      login(response.data);
+      login(response.data, rememberMe);
       if (response.data.role === 'ADMIN') {
         navigate('/admin');
       } else {
@@ -138,7 +139,6 @@ export default function LoginPage() {
                   <Form.Group className="mb-4" controlId="loginPassword">
                     <div className="d-flex justify-content-between align-items-center mb-1">
                       <Form.Label className="fw-semibold small text-uppercase text-muted mb-0">Password</Form.Label>
-                      <Link to="#" className="small text-primary text-decoration-none fw-semibold">Forgot password?</Link>
                     </div>
                     <div className="input-group input-group-lg border rounded-3 overflow-hidden shadow-sm transition-all focus-within-shadow">
                       <span className="input-group-text bg-white border-0 ps-3">
@@ -156,10 +156,16 @@ export default function LoginPage() {
                     </div>
                   </Form.Group>
 
-                  {/* <div className="mb-4 form-check">
-                    <input type="checkbox" className="form-check-input" id="rememberMe" />
+                  <div className="mb-4 form-check">
+                    <input 
+                      type="checkbox" 
+                      className="form-check-input" 
+                      id="rememberMe" 
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
                     <label className="form-check-label small text-muted" htmlFor="rememberMe">Remember me for 30 days</label>
-                  </div> */}
+                  </div>
 
                   <Button
                     variant="primary"
