@@ -53,6 +53,9 @@ public class Booking {
     @Column(name = "late_checkout_fee", precision = 10, scale = 2)
     private BigDecimal lateCheckoutFee = BigDecimal.ZERO;
 
+    @Column(name = "cancellation_fee", precision = 10, scale = 2)
+    private BigDecimal cancellationFee = BigDecimal.ZERO;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

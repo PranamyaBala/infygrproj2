@@ -310,6 +310,41 @@ public class BookingService {
         return enrichBookingDTO(updated);
     }
 
+    @Transactional
+    public BookingDTO cancelBookingByUser(Long id, String userEmail) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new BookingNotFoundException(id));
+
+        UserDTO user = userService.getProfile(userEmail);
+        if (!booking.getUserId().equals(user.getId())) {
+            throw new IllegalArgumentException("You are not authorized to cancel this booking.");
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.APPROVED) {
+            throw new IllegalArgumentException("Only PENDING or APPROVED bookings can be cancelled.");
+        }
+
+        LocalDate today = LocalDate.now();
+        if (booking.getStartDate().isBefore(today)) {
+            throw new IllegalArgumentException("Cannot cancel a booking after its check-in date. Please contact the administrator.");
+        }
+
+        if (booking.getStatus() == BookingStatus.APPROVED) {
+            long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(today, booking.getStartDate());
+            if (daysBetween < 2) {
+                // Apply 15% cancellation fee
+                BigDecimal penalty = booking.getTotalPrice().multiply(new BigDecimal("0.15")).setScale(2, java.math.RoundingMode.HALF_UP);
+                booking.setCancellationFee(penalty);
+            }
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        Booking updated = bookingRepository.save(booking);
+        log.info("Booking {} cancelled by user {}", booking.getBookingReference(), userEmail);
+
+        return enrichBookingDTO(updated);
+    }
+
     // ==================== OCCUPANCY REPORT (US 07) ====================
 
     @Transactional(readOnly = true)
@@ -428,7 +463,7 @@ public class BookingService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         String header = "Booking Reference,Student Name,Student Email,Room Number," +
-                "Check-in,Check-out,Occupants,Status,Total Price,Late Checkout Fee,Grand Total\n";
+                "Check-in,Check-out,Occupants,Status,Total Price,Late Checkout Fee,Cancellation Fee,Grand Total\n";
 
         String csvBody = bookingRepository.findAll().stream()
                 .map(booking -> {
@@ -446,7 +481,8 @@ public class BookingService {
                     }
 
                     BigDecimal lateFee = booking.getLateCheckoutFee() != null ? booking.getLateCheckoutFee() : BigDecimal.ZERO;
-                    BigDecimal grandTotal = booking.getTotalPrice().add(lateFee);
+                    BigDecimal cancelFee = booking.getCancellationFee() != null ? booking.getCancellationFee() : BigDecimal.ZERO;
+                    BigDecimal grandTotal = booking.getTotalPrice().add(lateFee).add(cancelFee);
 
                     return String.join(",",
                             booking.getBookingReference(),
@@ -459,6 +495,7 @@ public class BookingService {
                             booking.getStatus().name(),
                             booking.getTotalPrice().toString(),
                             lateFee.toString(),
+                            cancelFee.toString(),
                             grandTotal.toString()
                     );
                 })

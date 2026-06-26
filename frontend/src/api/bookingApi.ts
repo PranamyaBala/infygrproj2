@@ -15,6 +15,9 @@ export const bookingApi = {
   getBookingById: (id: number) =>
     apiClient.get<Booking>(`/api/bookings/${id}`),
 
+  cancelBooking: (id: number) =>
+    apiClient.put<Booking>(`/api/bookings/${id}/cancel`),
+
   // Admin endpoints
   getAllBookings: () =>
     apiClient.get<Booking[]>('/api/admin/bookings'),

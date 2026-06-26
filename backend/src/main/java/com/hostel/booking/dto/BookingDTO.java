@@ -27,6 +27,7 @@ public class BookingDTO {
     private String bookingReference;
     private Boolean lateCheckoutRequested;
     private BigDecimal lateCheckoutFee;
+    private BigDecimal cancellationFee;
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -74,9 +74,21 @@ export default function AdminDashboard() {
   const [selectedRoomForOccupants, setSelectedRoomForOccupants] = useState<Room | null>(null);
   const [occupantsLoading, setOccupantsLoading] = useState(false);
   const [roomOccupants, setRoomOccupants] = useState<Booking[]>([]);
+  const [roomUpcomingReservations, setRoomUpcomingReservations] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
 
   const handleViewOccupants = async (room: Room) => {
-    if (room.status !== 'OCCUPIED' && !(room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) return;
+    // Only block click if room is fully available and has no upcoming reservations
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const hasUpcoming = allBookings.some(b => {
+      if (b.roomId !== room.id || b.status !== 'APPROVED') return false;
+      const bStart = new Date(b.startDate);
+      bStart.setHours(0, 0, 0, 0);
+      return bStart >= today;
+    });
+    
+    if (!hasUpcoming && room.status !== 'OCCUPIED' && !(room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) return;
     
     setSelectedRoomForOccupants(room);
     setShowOccupantsModal(true);
@@ -105,6 +117,15 @@ export default function AdminDashboard() {
         return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
       });
       setRoomOccupants(currentOccupants);
+
+      const upcoming = res.data.filter(b => {
+        if (b.roomId !== room.id || b.status !== 'APPROVED') return false;
+        const bStart = new Date(b.startDate);
+        bStart.setHours(0, 0, 0, 0);
+        return bStart >= today;
+      }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      
+      setRoomUpcomingReservations(upcoming);
     } catch (err) {
       console.error(err);
       toast.error('Failed to load occupants');
@@ -191,15 +212,17 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [roomRes, amenityRes] = await Promise.all([
+      const [roomRes, amenityRes, bookingRes] = await Promise.all([
         roomApi.getAllRooms(),
         roomApi.getAllAmenities(),
+        bookingApi.getAllBookings(),
       ]);
       const sortedRooms = roomRes.data.sort((a, b) => 
         a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true })
       );
       setRooms(sortedRooms);
       setAmenities(amenityRes.data);
+      setAllBookings(bookingRes.data);
     } catch { /* ignore */ }
     finally { setLoading(false); }
   };
@@ -471,19 +494,53 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {filteredRooms.map(room => (
+              {filteredRooms.map(room => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const upcoming = allBookings.filter(b => {
+                  if (b.roomId !== room.id || b.status !== 'APPROVED') return false;
+                  const bStart = new Date(b.startDate);
+                  bStart.setHours(0, 0, 0, 0);
+                  return bStart >= today;
+                }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+                
+                const hasUpcoming = upcoming.length > 0;
+                const nextArrival = hasUpcoming ? upcoming[0] : null;
+
+                const isOccupiedOrReserved = room.status === 'OCCUPIED' || 
+                  (room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity) || 
+                  hasUpcoming;
+
+                return (
                 <tr key={room.id}>
                   <td className="fw-bold">
-                    <span 
-                      style={{ 
-                        cursor: (room.status === 'OCCUPIED' || (room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) ? 'pointer' : 'default',
-                        textDecoration: (room.status === 'OCCUPIED' || (room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) ? 'underline' : 'none' 
-                      }}
-                      className={(room.status === 'OCCUPIED' || (room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) ? "text-primary" : ""}
-                      onClick={() => handleViewOccupants(room)}
-                    >
-                      {room.roomNumber}
-                    </span>
+                    <div className="d-flex align-items-center gap-2">
+                      <span 
+                        style={{ 
+                          cursor: isOccupiedOrReserved ? 'pointer' : 'default',
+                          textDecoration: isOccupiedOrReserved ? 'underline' : 'none' 
+                        }}
+                        className={isOccupiedOrReserved ? "text-primary" : ""}
+                        onClick={() => { if (isOccupiedOrReserved) handleViewOccupants(room); }}
+                      >
+                        {room.roomNumber}
+                      </span>
+                      {hasUpcoming && nextArrival && (
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={<Tooltip id={`tooltip-${room.id}`}>Next Arrival: {nextArrival.startDate} ({nextArrival.occupants} beds)</Tooltip>}
+                        >
+                          <Badge 
+                            bg="warning" 
+                            text="dark" 
+                            style={{ cursor: 'pointer', fontSize: '0.65rem' }} 
+                            onClick={() => handleViewOccupants(room)}
+                          >
+                            UPCOMING
+                          </Badge>
+                        </OverlayTrigger>
+                      )}
+                    </div>
                   </td>
                   <td>{room.roomType}</td>
                   <td>{room.floor}</td>
@@ -571,7 +628,8 @@ export default function AdminDashboard() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </Table>
         </Card.Body>
@@ -922,52 +980,89 @@ export default function AdminDashboard() {
       {/* Occupants Modal */}
       <Modal show={showOccupantsModal} onHide={() => setShowOccupantsModal(false)} centered size="lg">
         <Modal.Header closeButton className="bg-info text-white">
-          <Modal.Title><FaUsers className="me-2" />Current Occupants - Room {selectedRoomForOccupants?.roomNumber}</Modal.Title>
+          <Modal.Title><FaUsers className="me-2" />Occupants & Reservations - Room {selectedRoomForOccupants?.roomNumber}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {occupantsLoading ? (
             <div className="text-center py-4"><Spinner animation="border" variant="info" /></div>
-          ) : roomOccupants.length === 0 ? (
-            <p className="text-center text-muted py-4">No active occupants found.</p>
           ) : (
-            <Table responsive hover className="align-middle">
-              <thead className="table-light">
-                <tr>
-                  <th>Booking Ref</th>
-                  <th>Occupant Name</th>
-                  <th>Email</th>
-                  <th>Check-in</th>
-                  <th>Check-out</th>
-                  <th>Beds</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roomOccupants.map(b => {
-                  // Determine if the booking is active today
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const start = new Date(b.startDate);
-                  start.setHours(0, 0, 0, 0);
-                  const end = new Date(b.endDate);
-                  end.setHours(23, 59, 59, 999);
-                  const isActiveToday = today >= start && today <= end;
-
-                  return (
-                    <tr key={b.id} className={isActiveToday ? 'table-primary border-primary border-2' : ''}>
-                      <td className={`text-muted small ${isActiveToday ? 'fw-bold text-dark' : ''}`}>{b.bookingReference}</td>
-                      <td className={`fw-bold ${isActiveToday ? 'text-primary' : ''}`}>
-                        {b.studentName}
-                        {isActiveToday && <Badge bg="primary" className="ms-2">ACTIVE TODAY</Badge>}
-                      </td>
-                      <td>{b.studentEmail}</td>
-                      <td>{b.startDate}</td>
-                      <td>{b.endDate}</td>
-                      <td>{b.occupants}</td>
+            <>
+              {/* Current Occupants Section */}
+              <h6 className="fw-bold mb-3 text-primary">Currently Checked-In</h6>
+              {roomOccupants.length === 0 ? (
+                <p className="text-muted small mb-4">No active occupants found.</p>
+              ) : (
+                <Table responsive hover className="align-middle mb-4">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Booking Ref</th>
+                      <th>Occupant Name</th>
+                      <th>Email</th>
+                      <th>Check-in</th>
+                      <th>Check-out</th>
+                      <th>Beds</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
+                  </thead>
+                  <tbody>
+                    {roomOccupants.map(b => {
+                      // Determine if the booking is active today
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const start = new Date(b.startDate);
+                      start.setHours(0, 0, 0, 0);
+                      const end = new Date(b.endDate);
+                      end.setHours(23, 59, 59, 999);
+                      const isActiveToday = today >= start && today <= end;
+                      
+                      return (
+                        <tr key={b.id} className={isActiveToday ? 'table-primary border-primary border-2' : ''}>
+                          <td className={`text-muted small ${isActiveToday ? 'fw-bold text-dark' : ''}`}>{b.bookingReference}</td>
+                          <td className={`fw-bold ${isActiveToday ? 'text-primary' : ''}`}>
+                            {b.studentName}
+                            {isActiveToday && <Badge bg="primary" className="ms-2">ACTIVE TODAY</Badge>}
+                          </td>
+                          <td>{b.studentEmail}</td>
+                          <td>{b.startDate}</td>
+                          <td>{b.endDate}</td>
+                          <td>{b.occupants}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              )}
+
+              {/* Upcoming Reservations Section */}
+              <h6 className="fw-bold mb-3 text-warning mt-2">Upcoming Approved Reservations</h6>
+              {roomUpcomingReservations.length === 0 ? (
+                <p className="text-muted small">No upcoming reservations found.</p>
+              ) : (
+                <Table responsive hover className="align-middle">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Booking Ref</th>
+                      <th>Occupant Name</th>
+                      <th>Email</th>
+                      <th>Arrival Date</th>
+                      <th>Departure Date</th>
+                      <th>Beds</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roomUpcomingReservations.map(b => (
+                      <tr key={b.id}>
+                        <td className="text-muted small">{b.bookingReference}</td>
+                        <td className="fw-bold">{b.studentName}</td>
+                        <td>{b.studentEmail}</td>
+                        <td className="text-success fw-bold">{b.startDate}</td>
+                        <td>{b.endDate}</td>
+                        <td>{b.occupants}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </>
           )}
         </Modal.Body>
       </Modal>

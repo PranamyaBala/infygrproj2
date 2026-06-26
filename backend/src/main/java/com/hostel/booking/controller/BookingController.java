@@ -86,4 +86,13 @@ public class BookingController {
         BookingDTO booking = bookingService.handleLateCheckout(id, request);
         return ResponseEntity.ok(booking);
     }
+
+    @PutMapping("/{id}/cancel")
+    @Operation(summary = "Cancel a booking (User)", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<BookingDTO> cancelBooking(
+            @PathVariable Long id,
+            Authentication authentication) {
+        BookingDTO booking = bookingService.cancelBookingByUser(id, authentication.getName());
+        return ResponseEntity.ok(booking);
+    }
 }

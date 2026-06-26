@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container, Row, Col, Card, Badge, Spinner, Alert, Button
+  Container, Row, Col, Card, Badge, Spinner, Alert, Button, Modal
 } from 'react-bootstrap';
 import {
   FaCalendarAlt, FaBed, FaClock, FaHashtag, FaMoneyBillWave, FaUsers, FaDownload
@@ -17,6 +17,12 @@ export default function MyBookingsPage() {
   const navigate = useNavigate();
   const { markAllAsSeen } = useBookingNotifications();
 
+  // Cancel State
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+  const [cancelPenaltyWarning, setCancelPenaltyWarning] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+
   useEffect(() => {
     loadBookings();
     markAllAsSeen();
@@ -30,6 +36,46 @@ export default function MyBookingsPage() {
       setError('Failed to load bookings.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelClick = (e: React.MouseEvent, booking: Booking) => {
+    e.stopPropagation();
+    setBookingToCancel(booking);
+    
+    // Check if within 48 hours for APPROVED bookings
+    if (booking.status === 'APPROVED') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(booking.startDate);
+      start.setHours(0, 0, 0, 0);
+      const diffTime = start.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 2) {
+        setCancelPenaltyWarning(true);
+      } else {
+        setCancelPenaltyWarning(false);
+      }
+    } else {
+      setCancelPenaltyWarning(false);
+    }
+    
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!bookingToCancel) return;
+    setCancelLoading(true);
+    try {
+      await bookingApi.cancelBooking(bookingToCancel.id);
+      setShowCancelModal(false);
+      loadBookings(); // Refresh list
+    } catch (err) {
+      setError('Failed to cancel booking.');
+    } finally {
+      setCancelLoading(false);
+      setBookingToCancel(null);
     }
   };
 
@@ -145,12 +191,50 @@ export default function MyBookingsPage() {
                       </Button>
                     </div>
                   )}
+                  {['PENDING', 'APPROVED'].includes(booking.status) && new Date(booking.startDate) >= new Date(new Date().setHours(0,0,0,0)) && (
+                    <div className="d-grid mt-2">
+                      <Button 
+                        variant="outline-danger" 
+                        size="sm"
+                        onClick={(e) => handleCancelClick(e, booking)}
+                      >
+                        Cancel Request
+                      </Button>
+                    </div>
+                  )}
                 </Card.Body>
               </Card>
             </Col>
           ))}
         </Row>
       )}
+
+      {/* Cancel Modal */}
+      <Modal show={showCancelModal} onHide={() => setShowCancelModal(false)} centered>
+        <Modal.Header closeButton className="bg-danger text-white">
+          <Modal.Title>Cancel Booking</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {cancelPenaltyWarning ? (
+            <Alert variant="warning">
+              <Alert.Heading>Late Cancellation Penalty</Alert.Heading>
+              <p className="mb-0">
+                You are canceling less than 48 hours before your arrival. A <strong>15% cancellation penalty</strong> will be applied. Are you sure you want to proceed?
+              </p>
+            </Alert>
+          ) : (
+            <p>Are you sure you want to cancel this booking? This action cannot be undone.</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCancelModal(false)}>
+            Close
+          </Button>
+          <Button variant="danger" onClick={confirmCancel} disabled={cancelLoading}>
+            {cancelLoading ? <Spinner size="sm" /> : 'Yes, Cancel'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 }
