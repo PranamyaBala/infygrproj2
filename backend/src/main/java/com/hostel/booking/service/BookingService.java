@@ -428,7 +428,7 @@ public class BookingService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         String header = "Booking Reference,Student Name,Student Email,Room Number," +
-                "Check-in,Check-out,Occupants,Status,Total Price,Late Checkout Fee\n";
+                "Check-in,Check-out,Occupants,Status,Total Price,Late Checkout Fee,Grand Total\n";
 
         String csvBody = bookingRepository.findAll().stream()
                 .map(booking -> {
@@ -445,6 +445,9 @@ public class BookingService {
                         room = RoomDTO.builder().roomNumber("N/A").build();
                     }
 
+                    BigDecimal lateFee = booking.getLateCheckoutFee() != null ? booking.getLateCheckoutFee() : BigDecimal.ZERO;
+                    BigDecimal grandTotal = booking.getTotalPrice().add(lateFee);
+
                     return String.join(",",
                             booking.getBookingReference(),
                             "\"" + user.getFirstName() + " " + user.getLastName() + "\"",
@@ -455,7 +458,8 @@ public class BookingService {
                             String.valueOf(booking.getOccupants()),
                             booking.getStatus().name(),
                             booking.getTotalPrice().toString(),
-                            booking.getLateCheckoutFee() != null ? booking.getLateCheckoutFee().toString() : "0.00"
+                            lateFee.toString(),
+                            grandTotal.toString()
                     );
                 })
                 .collect(Collectors.joining("\n"));

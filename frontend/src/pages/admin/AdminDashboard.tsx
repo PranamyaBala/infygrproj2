@@ -10,7 +10,8 @@ import {
   FaEdit, FaSyncAlt, FaTag, FaCalendarAlt
 } from 'react-icons/fa';
 import { roomApi } from '../../api/roomApi';
-import type { Room, Amenity, CreateRoomRequest, UpdateRoomStatusRequest } from '../../types';
+import { bookingApi } from '../../api/bookingApi';
+import type { Room, Amenity, CreateRoomRequest, UpdateRoomStatusRequest, Booking } from '../../types';
 import toast from 'react-hot-toast';
 
 const ROOM_TYPES = ['SINGLE', 'DOUBLE', 'TRIPLE', 'SUITE', 'DORMITORY'];
@@ -44,6 +45,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [genderFilter, setGenderFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Add Room Modal
   const [showAddRoom, setShowAddRoom] = useState(false);
@@ -66,6 +68,50 @@ export default function AdminDashboard() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [statusUpdate, setStatusUpdate] = useState<UpdateRoomStatusRequest>({ status: '' });
+
+  // Occupants Modal
+  const [showOccupantsModal, setShowOccupantsModal] = useState(false);
+  const [selectedRoomForOccupants, setSelectedRoomForOccupants] = useState<Room | null>(null);
+  const [occupantsLoading, setOccupantsLoading] = useState(false);
+  const [roomOccupants, setRoomOccupants] = useState<Booking[]>([]);
+
+  const handleViewOccupants = async (room: Room) => {
+    if (room.status !== 'OCCUPIED' && !(room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) return;
+    
+    setSelectedRoomForOccupants(room);
+    setShowOccupantsModal(true);
+    setOccupantsLoading(true);
+    
+    try {
+      const res = await bookingApi.getAllBookings();
+      const currentOccupants = res.data.filter(b => 
+        b.roomId === room.id && b.status === 'CHECKED_IN'
+      ).sort((a, b) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const aStart = new Date(a.startDate); aStart.setHours(0, 0, 0, 0);
+        const aEnd = new Date(a.endDate); aEnd.setHours(23, 59, 59, 999);
+        const isAActive = today >= aStart && today <= aEnd;
+        
+        const bStart = new Date(b.startDate); bStart.setHours(0, 0, 0, 0);
+        const bEnd = new Date(b.endDate); bEnd.setHours(23, 59, 59, 999);
+        const isBActive = today >= bStart && today <= bEnd;
+        
+        if (isAActive && !isBActive) return -1;
+        if (!isAActive && isBActive) return 1;
+        
+        // If both are active or both inactive, sort by most recent start date (descending)
+        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      });
+      setRoomOccupants(currentOccupants);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load occupants');
+    } finally {
+      setOccupantsLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -149,7 +195,10 @@ export default function AdminDashboard() {
         roomApi.getAllRooms(),
         roomApi.getAllAmenities(),
       ]);
-      setRooms(roomRes.data);
+      const sortedRooms = roomRes.data.sort((a, b) => 
+        a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true })
+      );
+      setRooms(sortedRooms);
       setAmenities(amenityRes.data);
     } catch { /* ignore */ }
     finally { setLoading(false); }
@@ -263,9 +312,10 @@ export default function AdminDashboard() {
   };
 
   const filteredRooms = rooms.filter(r => {
+    const matchesSearch = !searchQuery || r.roomNumber.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = !statusFilter || r.status === statusFilter;
     const matchesGender = !genderFilter || r.genderPolicy === genderFilter;
-    return matchesStatus && matchesGender;
+    return matchesSearch && matchesStatus && matchesGender;
   });
 
   const getGenderBadge = (policy: string) => {
@@ -328,6 +378,9 @@ export default function AdminDashboard() {
     return <Badge bg={v[status] || 'secondary'}>{status}</Badge>;
   };
 
+  const isDuplicateRoom = newRoom.roomNumber.trim() !== '' && 
+    rooms.some(r => r.roomNumber.toLowerCase() === newRoom.roomNumber.toLowerCase().trim());
+
   if (loading) {
     return <Container className="py-5 text-center"><Spinner animation="border" variant="primary" /></Container>;
   }
@@ -336,9 +389,18 @@ export default function AdminDashboard() {
     <Container fluid className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h3 className="fw-bold mb-0"><FaTachometerAlt className="me-2 text-primary" />Admin Dashboard</h3>
-        <Button variant="primary" onClick={() => setShowAddRoom(true)}>
-          <FaPlus className="me-2" />Add New Room
-        </Button>
+        <div className="d-flex gap-2">
+          <Form.Control
+            type="text"
+            placeholder="Search room no..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '200px' }}
+          />
+          <Button variant="primary" onClick={() => setShowAddRoom(true)}>
+            <FaPlus className="me-2" />Add New Room
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -411,7 +473,18 @@ export default function AdminDashboard() {
             <tbody>
               {filteredRooms.map(room => (
                 <tr key={room.id}>
-                  <td className="fw-bold">{room.roomNumber}</td>
+                  <td className="fw-bold">
+                    <span 
+                      style={{ 
+                        cursor: (room.status === 'OCCUPIED' || (room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) ? 'pointer' : 'default',
+                        textDecoration: (room.status === 'OCCUPIED' || (room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) ? 'underline' : 'none' 
+                      }}
+                      className={(room.status === 'OCCUPIED' || (room.roomType === 'DORMITORY' && room.availableBeds !== undefined && room.availableBeds < room.capacity)) ? "text-primary" : ""}
+                      onClick={() => handleViewOccupants(room)}
+                    >
+                      {room.roomNumber}
+                    </span>
+                  </td>
                   <td>{room.roomType}</td>
                   <td>{room.floor}</td>
                   <td>{room.capacity}</td>
@@ -519,8 +592,14 @@ export default function AdminDashboard() {
                     type="text"
                     value={newRoom.roomNumber}
                     onChange={(e) => setNewRoom(prev => ({ ...prev, roomNumber: e.target.value }))}
+                    isInvalid={isDuplicateRoom}
                     required
                   />
+                  {isDuplicateRoom && (
+                    <Form.Control.Feedback type="invalid">
+                      Room number already exists!
+                    </Form.Control.Feedback>
+                  )}
                 </Form.Group>
               </Col>
               <Col md={6}>
@@ -544,6 +623,7 @@ export default function AdminDashboard() {
                     value={newRoom.floor}
                     onChange={(e) => setNewRoom(prev => ({ ...prev, floor: parseInt(e.target.value) }))}
                     required
+                    disabled
                   />
                 </Form.Group>
               </Col>
@@ -555,6 +635,7 @@ export default function AdminDashboard() {
                     value={newRoom.capacity}
                     onChange={(e) => setNewRoom(prev => ({ ...prev, capacity: parseInt(e.target.value) }))}
                     required
+                    disabled
                   />
                 </Form.Group>
               </Col>
@@ -566,6 +647,7 @@ export default function AdminDashboard() {
                     value={newRoom.pricePerNight}
                     onChange={(e) => setNewRoom(prev => ({ ...prev, pricePerNight: parseFloat(e.target.value) }))}
                     required
+                    disabled
                   />
                 </Form.Group>
               </Col>
@@ -631,7 +713,7 @@ export default function AdminDashboard() {
                 <h4 className="fw-bold mb-0 text-primary">₹{calculatedTotal.toFixed(2)}</h4>
               </div>
             </div>
-            <Button variant="primary" type="submit" disabled={addingRoom} className="w-100">
+            <Button variant="primary" type="submit" disabled={addingRoom || isDuplicateRoom} className="w-100">
               {addingRoom ? <Spinner animation="border" size="sm" /> : 'Create Room'}
             </Button>
           </Form>
@@ -654,6 +736,7 @@ export default function AdminDashboard() {
                     value={editRoomData.roomNumber}
                     onChange={(e) => setEditRoomData(prev => ({ ...prev, roomNumber: e.target.value }))}
                     required
+                    disabled
                   />
                 </Form.Group>
               </Col>
@@ -678,6 +761,7 @@ export default function AdminDashboard() {
                     value={editRoomData.floor}
                     onChange={(e) => setEditRoomData(prev => ({ ...prev, floor: parseInt(e.target.value) }))}
                     required
+                    disabled
                   />
                 </Form.Group>
               </Col>
@@ -689,6 +773,7 @@ export default function AdminDashboard() {
                     value={editRoomData.capacity}
                     onChange={(e) => setEditRoomData(prev => ({ ...prev, capacity: parseInt(e.target.value) }))}
                     required
+                    disabled
                   />
                 </Form.Group>
               </Col>
@@ -700,6 +785,7 @@ export default function AdminDashboard() {
                     value={editRoomData.pricePerNight}
                     onChange={(e) => setEditRoomData(prev => ({ ...prev, pricePerNight: parseFloat(e.target.value) }))}
                     required
+                    disabled
                   />
                 </Form.Group>
               </Col>
@@ -831,6 +917,59 @@ export default function AdminDashboard() {
           <Button variant="secondary" onClick={() => setShowStatusModal(false)}>Cancel</Button>
           <Button variant="primary" onClick={handleStatusUpdate}>Update Status</Button>
         </Modal.Footer>
+      </Modal>
+
+      {/* Occupants Modal */}
+      <Modal show={showOccupantsModal} onHide={() => setShowOccupantsModal(false)} centered size="lg">
+        <Modal.Header closeButton className="bg-info text-white">
+          <Modal.Title><FaUsers className="me-2" />Current Occupants - Room {selectedRoomForOccupants?.roomNumber}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {occupantsLoading ? (
+            <div className="text-center py-4"><Spinner animation="border" variant="info" /></div>
+          ) : roomOccupants.length === 0 ? (
+            <p className="text-center text-muted py-4">No active occupants found.</p>
+          ) : (
+            <Table responsive hover className="align-middle">
+              <thead className="table-light">
+                <tr>
+                  <th>Booking Ref</th>
+                  <th>Occupant Name</th>
+                  <th>Email</th>
+                  <th>Check-in</th>
+                  <th>Check-out</th>
+                  <th>Beds</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roomOccupants.map(b => {
+                  // Determine if the booking is active today
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const start = new Date(b.startDate);
+                  start.setHours(0, 0, 0, 0);
+                  const end = new Date(b.endDate);
+                  end.setHours(23, 59, 59, 999);
+                  const isActiveToday = today >= start && today <= end;
+
+                  return (
+                    <tr key={b.id} className={isActiveToday ? 'table-primary border-primary border-2' : ''}>
+                      <td className={`text-muted small ${isActiveToday ? 'fw-bold text-dark' : ''}`}>{b.bookingReference}</td>
+                      <td className={`fw-bold ${isActiveToday ? 'text-primary' : ''}`}>
+                        {b.studentName}
+                        {isActiveToday && <Badge bg="primary" className="ms-2">ACTIVE TODAY</Badge>}
+                      </td>
+                      <td>{b.studentEmail}</td>
+                      <td>{b.startDate}</td>
+                      <td>{b.endDate}</td>
+                      <td>{b.occupants}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          )}
+        </Modal.Body>
       </Modal>
     </Container>
   );

@@ -192,6 +192,7 @@ export default function PricingTierManagement() {
                   <Form.Control
                     type="date"
                     value={newTier.startDate}
+                    min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setNewTier(prev => ({ ...prev, startDate: e.target.value }))}
                     required
                   />
@@ -221,7 +222,7 @@ export default function PricingTierManagement() {
                 required
               />
               <Form.Text className="text-muted">
-                Currently: ₹{(room.basePriceWithAmenities * (newTier.priceMultiplier || 1)).toFixed(2)} / night
+                Updated price: ₹{(room.basePriceWithAmenities * (newTier.priceMultiplier || 1)).toFixed(2)} / night
               </Form.Text>
             </Form.Group>
             <Button variant="primary" type="submit" className="w-100 fw-bold" disabled={submitting}>

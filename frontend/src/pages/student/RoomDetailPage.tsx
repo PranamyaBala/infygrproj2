@@ -189,7 +189,7 @@ export default function RoomDetailPage() {
     
     // Iterate day by day to match backend logic
     for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = formatDateFns(d, 'yyyy-MM-dd');
       let dayMultiplier = 1.0;
       
       if (room.pricingTiers) {
@@ -561,7 +561,7 @@ export default function RoomDetailPage() {
               <div className="bg-light rounded p-3 mb-3 border border-primary border-opacity-25">
                 <div className="d-flex justify-content-between align-items-center">
                   <div>
-                    <span>₹{room.basePriceWithAmenities} × {nights} night{nights > 1 ? 's' : ''}</span>
+                    <span>₹{(dynamicTotal / nights).toFixed(2)} × {nights} night{nights > 1 ? 's' : ''}</span>
                     {isSeasonal && (
                       <Badge bg="warning" text="dark" className="d-block mt-1">
                         Seasonal Rate Applied

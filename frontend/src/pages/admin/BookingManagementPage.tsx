@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Container, Card, Table, Badge, Button, Form, Spinner, Modal
+  Container, Card, Table, Badge, Button, Form, Spinner, Modal, Pagination
 } from 'react-bootstrap';
 import {
   FaCalendarAlt, FaCheckCircle, FaTimesCircle, FaFileDownload
@@ -23,7 +23,11 @@ export default function BookingManagementPage() {
   const [showLateCheckout, setShowLateCheckout] = useState(false);
   const [lateCheckoutFee, setLateCheckoutFee] = useState('');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   useEffect(() => {
+    setCurrentPage(1);
     loadBookings();
   }, [statusFilter]);
 
@@ -33,7 +37,8 @@ export default function BookingManagementPage() {
       const res = statusFilter
         ? await bookingApi.getBookingsByStatus(statusFilter)
         : await bookingApi.getAllBookings();
-      setBookings(res.data);
+      const sortedBookings = res.data.sort((a: Booking, b: Booking) => b.id - a.id);
+      setBookings(sortedBookings);
     } catch { /* ignore */ }
     finally { setLoading(false); }
   };
@@ -149,7 +154,7 @@ export default function BookingManagementPage() {
                 {bookings.length === 0 ? (
                   <tr><td colSpan={8} className="text-center py-4 text-muted">No bookings found</td></tr>
                 ) : (
-                  bookings.map(b => (
+                  bookings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map(b => (
                     <tr key={b.id}>
                       <td className="fw-bold">{b.bookingReference}</td>
                       <td>
@@ -223,6 +228,31 @@ export default function BookingManagementPage() {
                 )}
               </tbody>
             </Table>
+          )}
+
+          {/* Pagination Controls */}
+          {!loading && bookings.length > ITEMS_PER_PAGE && (
+            <div className="d-flex justify-content-center p-3 border-top bg-light">
+              <Pagination className="mb-0">
+                <Pagination.Prev 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                />
+                {[...Array(Math.ceil(bookings.length / ITEMS_PER_PAGE))].map((_, idx) => (
+                  <Pagination.Item
+                    key={idx + 1}
+                    active={idx + 1 === currentPage}
+                    onClick={() => setCurrentPage(idx + 1)}
+                  >
+                    {idx + 1}
+                  </Pagination.Item>
+                ))}
+                <Pagination.Next
+                  disabled={currentPage === Math.ceil(bookings.length / ITEMS_PER_PAGE)}
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(bookings.length / ITEMS_PER_PAGE), prev + 1))}
+                />
+              </Pagination>
+            </div>
           )}
         </Card.Body>
       </Card>
