@@ -15,6 +15,12 @@ logs/
 *.ps1
 *.ps
 *error*.txt
+err.txt
+err2.txt
+gateway-log.txt
+springboot-log.txt
+test.py
+tools/
 
 
 # IDEs
