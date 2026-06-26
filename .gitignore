@@ -9,6 +9,12 @@ target/
 *.war
 *.log
 logs/
+*.err
+*.bat
+*.cmd
+*.ps1
+*.ps
+
 
 # IDEs
 .idea/
