@@ -21,6 +21,14 @@ gateway-log.txt
 springboot-log.txt
 test.py
 tools/
+temp_hash/
+backend/uploads/
+dependency_tree.txt
+filelist.txt
+java_files.txt
+lombok.config
+maven_install.txt
+maven_output.txt
 
 
 # IDEs
