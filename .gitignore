@@ -14,6 +14,7 @@ logs/
 *.cmd
 *.ps1
 *.ps
+*error*.txt
 
 
 # IDEs
